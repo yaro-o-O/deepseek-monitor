@@ -550,20 +550,34 @@ function createWindow() {
   applyWindowPolicy();
 }
 
+function createTrayIcon() {
+  const iconPath = path.join(__dirname, '..', 'assets', 'icon.png');
+  if (!fs.existsSync(iconPath)) return nativeImage.createEmpty();
+  const source = nativeImage.createFromPath(iconPath);
+  if (process.platform !== 'darwin') return source.resize({ width: 16, height: 16 });
+
+  // macOS menu bar: a monochrome template image (icon silhouette from its alpha
+  // channel) that the system tints like the other menu bar icons.
+  const image = nativeImage.createEmpty();
+  for (const scaleFactor of [1, 2]) {
+    const size = 18 * scaleFactor;
+    const bitmap = source.resize({ width: size, height: size, quality: 'best' }).toBitmap();
+    for (let i = 0; i < bitmap.length; i += 4) {
+      bitmap[i] = 0;
+      bitmap[i + 1] = 0;
+      bitmap[i + 2] = 0;
+    }
+    image.addRepresentation({ scaleFactor, width: size, height: size, buffer: bitmap });
+  }
+  image.setTemplateImage(true);
+  return image;
+}
+
 // Create tray icon
 function createTray() {
   if (tray) return;
 
-  const iconPath = path.join(__dirname, '..', 'assets', 'icon.png');
-
-  let trayIcon;
-  if (fs.existsSync(iconPath)) {
-    trayIcon = nativeImage.createFromPath(iconPath).resize({ width: 16, height: 16 });
-  } else {
-    trayIcon = nativeImage.createEmpty();
-  }
-
-  tray = new Tray(trayIcon);
+  tray = new Tray(createTrayIcon());
   tray.setToolTip('DeepSeek Monitor');
   tray.setContextMenu(buildTrayMenu());
   tray.on('click', () => {
@@ -643,7 +657,22 @@ function initAutoUpdater() {
   });
 }
 
+// Single instance: launching the app again (Finder, Spotlight, Start menu) brings
+// back the existing window instead of starting a second tray app.
+const isPrimaryInstance = app.requestSingleInstanceLock();
+if (!isPrimaryInstance) app.quit();
+
+app.on('second-instance', () => {
+  if (app.isReady()) showMainWindow();
+});
+
+// macOS: reopening the running app (it has no Dock icon) restores the hidden window.
+app.on('activate', () => {
+  if (app.isReady()) showMainWindow();
+});
+
 app.whenReady().then(() => {
+  if (!isPrimaryInstance) return;
   app.setAppUserModelId('com.deepseek.monitor');
   loadConfig();
   createWindow();
@@ -656,7 +685,7 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
-  // Keep the app running in the tray until the user chooses "退出".
+  // Keep the app running in the tray until the user chooses "Quit".
 });
 
 app.on('before-quit', () => {
