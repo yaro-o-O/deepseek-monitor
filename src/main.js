@@ -873,48 +873,6 @@ function requestJsonUrl(targetUrl, token, options = {}) {
   });
 }
 
-function requestExternalJson(targetUrl, options = {}) {
-  return new Promise((resolve) => {
-    let target;
-    try {
-      target = new URL(targetUrl);
-    } catch (e) {
-      resolve({ success: false, error: e.message });
-      return;
-    }
-    const transport = target.protocol === 'http:' ? http : https;
-    const req = transport.request({
-      hostname: target.hostname,
-      port: target.port || (target.protocol === 'http:' ? 80 : 443),
-      path: `${target.pathname}${target.search}`,
-      method: options.method || 'GET',
-      headers: {
-        Accept: 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        ...(options.headers || {})
-      }
-    }, (res) => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        try {
-          const json = data ? JSON.parse(data) : {};
-          const ok = res.statusCode >= 200 && res.statusCode < 300;
-          resolve({ success: ok, status: res.statusCode, data: json, error: ok ? undefined : (json.message || json.msg || `HTTP ${res.statusCode}`) });
-        } catch (e) {
-          resolve({ success: false, status: res.statusCode, error: 'Parse error', raw: data });
-        }
-      });
-    });
-    req.on('error', (e) => resolve({ success: false, error: e.message }));
-    req.setTimeout(options.timeout || 15000, () => {
-      req.destroy();
-      resolve({ success: false, error: 'Timeout' });
-    });
-    req.end();
-  });
-}
-
 function usageErrorFromResult(result) {
   if (result.code === 40003 || String(result.error || '').toLowerCase().includes('invalid token')) {
     return t('usage.tokenExpired');
@@ -1104,6 +1062,16 @@ async function verifyUsageTokenValue(token) {
   return result.success;
 }
 
+const USAGE_PLATFORM_ORIGIN = new URL(DEEPSEEK_PROVIDER.loginUrl).origin;
+
+function isUsagePlatformUrl(url) {
+  try {
+    return new URL(url).origin === USAGE_PLATFORM_ORIGIN;
+  } catch (e) {
+    return false;
+  }
+}
+
 function maybeCaptureUsageToken(authHeader) {
   const match = /Bearer\s+(\S+)/i.exec(String(authHeader || ''));
   const token = match?.[1]?.trim();
@@ -1158,8 +1126,12 @@ function startUsageSyncWindow() {
     }
   });
 
-  const filter = { urls: ['<all_urls>'] };
-  usageSyncWindow.webContents.session.webRequest.onBeforeSendHeaders(filter, (details, callback) => {
+  // Only DeepSeek platform requests are inspected, so bearer tokens of other
+  // sites opened in this window (OAuth providers, third-party scripts) are never
+  // picked up or sent anywhere.
+  const syncSession = usageSyncWindow.webContents.session;
+  const filter = { urls: [`${USAGE_PLATFORM_ORIGIN}/*`] };
+  syncSession.webRequest.onBeforeSendHeaders(filter, (details, callback) => {
     const headers = details.requestHeaders || {};
     const authHeader = headers.Authorization || headers.authorization;
     if (authHeader) maybeCaptureUsageToken(authHeader);
@@ -1167,6 +1139,7 @@ function startUsageSyncWindow() {
   });
 
   usageSyncWindow.webContents.on('did-finish-load', () => {
+    if (!isUsagePlatformUrl(usageSyncWindow.webContents.getURL())) return;
     usageSyncWindow.webContents.executeJavaScript(`
       (() => {
         if (window.__dsmTokenHook) return;
@@ -1199,11 +1172,13 @@ function startUsageSyncWindow() {
   });
 
   usageSyncWindow.on('page-title-updated', (event, title) => {
+    if (!isUsagePlatformUrl(usageSyncWindow.webContents.getURL())) return;
     const token = String(title || '').replace(/^DSM_USAGE_TOKEN:/, '');
     if (title.startsWith('DSM_USAGE_TOKEN:')) maybeCaptureUsageToken(`Bearer ${token}`);
   });
 
   usageSyncWindow.on('closed', () => {
+    syncSession.webRequest.onBeforeSendHeaders(null);
     if (!usageTokenCaptured && mainWindow) mainWindow.webContents.send('usage-sync-ended');
     usageSyncWindow = null;
   });

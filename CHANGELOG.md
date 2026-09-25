@@ -16,6 +16,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Money amounts are now labelled with the currency the DeepSeek API reports (e.g. `$` for USD accounts) instead of always showing `¥`
 
+### Security
+
+- Auto-updates are now published from and fetched from `yaro-o-O/deepseek-monitor`
+- The usage-token sign-in window only inspects requests to `https://platform.deepseek.com`, so bearer tokens of other sites are never captured or sent for verification; the request hook is removed when the window closes
+- Server error messages and account names are rendered as text instead of HTML
+- Updated `js-yaml` to 4.3.2 (GHSA-2883-xcg3-v3hh)
+- `package-lock.json` now resolves packages from the official npm registry (added `.npmrc`); all integrity hashes are unchanged
+- Removed unused `requestExternalJson` helper
+
 ## [1.2.0] - 2026-08-11
 
 ### Added

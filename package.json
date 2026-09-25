@@ -18,7 +18,7 @@
     },
     "publish": {
       "provider": "github",
-      "owner": "guniang2",
+      "owner": "yaro-o-O",
       "repo": "deepseek-monitor"
     },
     "win": {
