@@ -148,7 +148,7 @@
       'tray.quit': '退出',
 
       'alert.title': '余额预警',
-      'alert.body': '账户「{name}」余额 ¥{balance} 已低于阈值 ¥{threshold}',
+      'alert.body': '账户「{name}」余额 {balance} 已低于阈值 {threshold}',
 
       'account.default': '默认账户',
       'login.windowTitle': 'DeepSeek 账号登录',
@@ -303,7 +303,7 @@
       'tray.quit': 'Quit',
 
       'alert.title': 'Low balance alert',
-      'alert.body': 'Account "{name}" balance ¥{balance} is below the threshold ¥{threshold}',
+      'alert.body': 'Account "{name}" balance {balance} is below the threshold {threshold}',
 
       'account.default': 'Default account',
       'login.windowTitle': 'DeepSeek sign-in',
@@ -318,6 +318,19 @@
       'err.tokenInvalid': 'Usage token is invalid or expired, please get a new one'
     }
   };
+
+  const CURRENCY_SYMBOLS = { CNY: '¥', USD: '$' };
+
+  function currencySymbol(currency) {
+    const code = String(currency || 'CNY').toUpperCase();
+    return CURRENCY_SYMBOLS[code] || code + ' ';
+  }
+
+  // Amounts are shown in the currency the DeepSeek API reports; nothing is converted.
+  function formatMoney(amount, currency) {
+    const value = Number(amount);
+    return Number.isFinite(value) ? currencySymbol(currency) + value.toFixed(2) : '—';
+  }
 
   function normalizeLanguage(lang) {
     return LANGUAGES.some((item) => item.code === lang) ? lang : DEFAULT_LANGUAGE;
@@ -334,7 +347,7 @@
     return template.replace(/\{(\w+)\}/g, (match, name) => (params[name] !== undefined ? String(params[name]) : match));
   }
 
-  const api = { DEFAULT_LANGUAGE, LANGUAGES, messages, normalizeLanguage, localeOf, translate };
+  const api = { DEFAULT_LANGUAGE, LANGUAGES, messages, normalizeLanguage, localeOf, translate, currencySymbol, formatMoney };
 
   if (typeof module === 'object' && module.exports) {
     module.exports = api;

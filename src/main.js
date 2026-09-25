@@ -795,12 +795,17 @@ function getBalanceTotals(rawData) {
   const totalBalance = infos.reduce((sum, item) => sum + Number(item.total_balance || 0), 0);
   const voucherBalance = infos.reduce((sum, item) => sum + Number(item.voucher_balance || item.granted_balance || 0), 0);
   const cashBalance = infos.reduce((sum, item) => sum + Number(item.cash_balance || item.topped_up_balance || 0), 0);
-  return { totalBalance, voucherBalance, cashBalance, normalized };
+  // The alert threshold is compared in the account's primary (first reported) currency.
+  const currency = infos[0]?.currency || 'CNY';
+  const primaryBalance = infos
+    .filter((item) => (item.currency || 'CNY') === currency)
+    .reduce((sum, item) => sum + Number(item.total_balance || 0), 0);
+  return { totalBalance, voucherBalance, cashBalance, currency, primaryBalance, normalized };
 }
 
 // ============ Budget alerts ============
 
-function maybeAlertLowBalance(account, total) {
+function maybeAlertLowBalance(account, total, currency) {
   if (config.budgetAlertEnabled === false || !account) return;
   const threshold = Number(config.balanceThreshold || 0);
   const value = Number(total);
@@ -813,7 +818,7 @@ function maybeAlertLowBalance(account, total) {
     saveConfig();
     notify(
       t('alert.title'),
-      t('alert.body', { name: account.name, balance: value.toFixed(2), threshold })
+      t('alert.body', { name: account.name, balance: i18n.formatMoney(value, currency), threshold: i18n.formatMoney(threshold, currency) })
     );
   } else if (value >= threshold && prev === 'below') {
     config.budgetAlertState[stateKey] = 'ok';
@@ -1064,7 +1069,8 @@ function normalizeUsage(amountData, costData) {
   return {
     models: Array.from(modelMap.values()),
     days,
-    monthCost: monthCostFromTotals || monthCostFromDays
+    monthCost: monthCostFromTotals || monthCostFromDays,
+    currency: costBiz.currency || null
   };
 }
 
@@ -1360,7 +1366,7 @@ ipcMain.handle('fetch-balance', async () => {
   const account = getActiveAccount();
   if (account) {
     const totals = getBalanceTotals(result.data);
-    maybeAlertLowBalance(account, totals.totalBalance);
+    maybeAlertLowBalance(account, totals.primaryBalance, totals.currency);
   }
   return { ...result, data: normalizeBalance(result.data) };
 });

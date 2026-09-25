@@ -660,7 +660,8 @@
       refreshTimer: null,
       loading: false,
       lastUpdate: null,
-      updatePayload: null
+      updatePayload: null,
+      balanceCurrency: null
     };
 
     const t = (key, params) => I18N.translate(state.config.language, key, params);
@@ -705,7 +706,9 @@
     }
 
     const fmtInt = (n) => Math.round(Number(n || 0)).toLocaleString('en-US');
-    const fmtMoney = (n) => Number.isFinite(Number(n)) ? '¥' + Number(n).toFixed(2) : '—';
+    // Usage costs are labelled with the usage API's currency, falling back to the balance currency.
+    const costCurrency = () => state.usage?.currency || state.balanceCurrency || 'CNY';
+    const fmtMoney = (n, currency = costCurrency()) => I18N.formatMoney(n, currency);
     const fmtTokensShort = (n) => {
       n = Number(n || 0);
       if (n >= 1e8) return (n / 1e6).toFixed(0) + 'M';
@@ -770,11 +773,17 @@
       }
       const data = result.data;
       const infos = data.balance_infos || [];
-      const total = infos.reduce((sum, item) => sum + Number(item.total_balance || 0), 0);
+      const totals = new Map();
+      for (const item of infos) {
+        const currency = item.currency || 'CNY';
+        totals.set(currency, (totals.get(currency) || 0) + Number(item.total_balance || 0));
+      }
+      if (!totals.size) totals.set('CNY', 0);
+      state.balanceCurrency = totals.keys().next().value;
       const available = data.is_available !== false;
       $('balanceStatus').textContent = available ? t('balance.available') : t('balance.insufficient');
       $('balanceStatus').classList.toggle('off', !available);
-      $('balanceAmount').textContent = fmtMoney(total);
+      $('balanceAmount').textContent = Array.from(totals, ([currency, total]) => fmtMoney(total, currency)).join(' + ');
       $('balanceAmount').classList.remove('dim');
     }
 
@@ -800,7 +809,7 @@
     function renderUsageRow(key, data, maxTokens) {
       $(key + 'Tokens').textContent = data ? fmtInt(data.totalTokens) + ' Tokens' : '—';
       $(key + 'Cost').textContent = data ? fmtMoney(data.cost) : '—';
-      $(key + 'Ratio').textContent = data && data.cost > 0 ? fmtTokensShort(data.totalTokens / data.cost) + ' T/¥' : '—';
+      $(key + 'Ratio').textContent = data && data.cost > 0 ? fmtTokensShort(data.totalTokens / data.cost) + ' T/' + I18N.currencySymbol(costCurrency()).trim() : '—';
       $(key + 'HitRate').textContent = t('usage.cacheHit', { rate: data ? hitRate(data) : '—' });
       $(key + 'Progress').style.width = data ? Math.max(2, data.totalTokens / maxTokens * 100) + '%' : '0%';
     }

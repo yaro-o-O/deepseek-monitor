@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **English localization** — the UI, tray menu, notifications and error messages are now available in English as well as Simplified Chinese
 - **Language selector** — pick the interface language from a dropdown at the top of Settings; Simplified Chinese stays the default and the choice is saved in the config
 
+### Fixed
+
+- Money amounts are now labelled with the currency the DeepSeek API reports (e.g. `$` for USD accounts) instead of always showing `¥`
+
 ## [1.2.0] - 2026-08-11
 
 ### Added
