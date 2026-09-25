@@ -5,6 +5,7 @@ const fs = require('fs');
 const https = require('https');
 const http = require('http');
 const crypto = require('crypto');
+const i18n = require('./i18n');
 
 // Config storage path
 const configDir = path.join(app.getPath('userData'), 'config.json');
@@ -32,8 +33,13 @@ let config = {
   budgetAlertState: {},
   alwaysOnTop: false,
   alwaysOnTopBehavior: 'none', // 'none' | 'hide' | 'fade'
-  alwaysOnTopOpacity: 0.35
+  alwaysOnTopOpacity: 0.35,
+  language: i18n.DEFAULT_LANGUAGE
 };
+
+function t(key, params) {
+  return i18n.translate(config.language, key, params);
+}
 
 // ============ Secret encryption (safeStorage) ============
 // apiKey / usageToken are stored encrypted when the OS keychain is available.
@@ -79,7 +85,7 @@ function getActiveAccount() {
 
 function ensureAccount() {
   if (!config.accounts.length) {
-    config.accounts.push({ id: crypto.randomUUID(), name: '默认账户', apiKey: '', usageToken: '' });
+    config.accounts.push({ id: crypto.randomUUID(), name: t('account.default'), apiKey: '', usageToken: '' });
     config.activeAccountId = config.accounts[0].id;
   }
   return getActiveAccount();
@@ -105,7 +111,7 @@ function normalizeConfig() {
     const legacyToken = config.usageToken || oldDeepSeek.usageToken || '';
     config.accounts = [{
       id: crypto.randomUUID(),
-      name: '默认账户',
+      name: t('account.default'),
       apiKey: legacyKey,
       usageToken: legacyToken
     }];
@@ -145,6 +151,12 @@ function normalizeConfig() {
     migrated = true;
   } else {
     config.alwaysOnTopOpacity = Math.min(1, Math.max(0.05, Math.round(onTopOpacity * 100) / 100));
+  }
+
+  const language = i18n.normalizeLanguage(config.language);
+  if (config.language !== language) {
+    config.language = language;
+    migrated = true;
   }
 
   delete config.selectedProvider;
@@ -188,7 +200,7 @@ function loadConfig() {
           if (a.usageToken && !String(a.usageToken).startsWith('enc:v1:')) hasPlainSecret = true;
           return {
             id: a.id || crypto.randomUUID(),
-            name: a.name || '默认账户',
+            name: a.name || t('account.default'),
             apiKey,
             usageToken
           };
@@ -577,25 +589,25 @@ function buildTrayMenu() {
   const opacity = Number(config.alwaysOnTopOpacity) || 0.35;
   const close = (v) => Math.abs(opacity - v) < 0.001;
   return Menu.buildFromTemplate([
-    { label: '显示主窗口', click: showMainWindow },
+    { label: t('tray.show'), click: showMainWindow },
     { type: 'separator' },
     {
-      label: '窗口置顶',
+      label: t('tray.onTop'),
       type: 'checkbox',
       checked: onTop,
       click: (item) => saveWindowOptions({ alwaysOnTop: item.checked })
     },
     {
-      label: '置顶后鼠标悬停',
+      label: t('tray.hoverBehavior'),
       enabled: onTop,
       submenu: [
-        { label: '保持原样', type: 'radio', checked: behavior === 'none', click: () => saveWindowOptions({ alwaysOnTopBehavior: 'none' }) },
-        { label: '自动隐藏', type: 'radio', checked: behavior === 'hide', click: () => saveWindowOptions({ alwaysOnTopBehavior: 'hide' }) },
-        { label: '半透明', type: 'radio', checked: behavior === 'fade', click: () => saveWindowOptions({ alwaysOnTopBehavior: 'fade' }) }
+        { label: t('onTop.none'), type: 'radio', checked: behavior === 'none', click: () => saveWindowOptions({ alwaysOnTopBehavior: 'none' }) },
+        { label: t('onTop.hide'), type: 'radio', checked: behavior === 'hide', click: () => saveWindowOptions({ alwaysOnTopBehavior: 'hide' }) },
+        { label: t('onTop.fade'), type: 'radio', checked: behavior === 'fade', click: () => saveWindowOptions({ alwaysOnTopBehavior: 'fade' }) }
       ]
     },
     {
-      label: '半透明透明度',
+      label: t('settings.onTop.opacity'),
       enabled: onTop && behavior === 'fade',
       submenu: [
         { label: '20%', type: 'radio', checked: close(0.2), click: () => saveWindowOptions({ alwaysOnTopOpacity: 0.2 }) },
@@ -606,7 +618,7 @@ function buildTrayMenu() {
     },
     { type: 'separator' },
     {
-      label: '退出',
+      label: t('tray.quit'),
       click: () => {
         isQuitting = true;
         app.quit();
@@ -622,24 +634,25 @@ function initAutoUpdater() {
   autoUpdater.autoInstallOnAppQuit = true;
 
   autoUpdater.on('update-available', () => {
-    sendToRenderer('update-status', { status: 'available', message: '发现新版本，正在下载...' });
+    sendToRenderer('update-status', { status: 'available', message: t('update.available') });
   });
   autoUpdater.on('update-not-available', () => {
-    sendToRenderer('update-status', { status: 'not-available', message: '已是最新版本' });
+    sendToRenderer('update-status', { status: 'not-available', message: t('update.notAvailable') });
   });
   autoUpdater.on('download-progress', (progress) => {
     sendToRenderer('update-status', {
       status: 'downloading',
       percent: Math.round(progress.percent || 0),
-      message: '正在下载更新...'
+      message: t('update.downloading')
     });
   });
   autoUpdater.on('update-downloaded', () => {
-    sendToRenderer('update-status', { status: 'downloaded', message: '新版本已下载，重启后生效' });
-    notify('DeepSeek Monitor 更新', '新版本已下载，重启应用即可完成更新');
+    sendToRenderer('update-status', { status: 'downloaded', message: t('update.downloaded') });
+    notify(t('update.notifyTitle'), t('update.notifyBody'));
   });
   autoUpdater.on('error', (error) => {
-    sendToRenderer('update-status', { status: 'error', message: '更新失败：' + (error.message || error) });
+    const detail = String(error.message || error);
+    sendToRenderer('update-status', { status: 'error', error: detail, message: t('update.error', { error: detail }) });
   });
 }
 
@@ -729,7 +742,7 @@ function requestProvider(path, options = {}) {
             success: httpOk && businessOk,
             status: res.statusCode,
             code: businessCode,
-            error: httpOk && !businessOk ? (json.msg || json.message || `业务错误：${businessCode}`) : undefined,
+            error: httpOk && !businessOk ? (json.msg || json.message || t('err.business', { code: businessCode })) : undefined,
             data: json
           });
         } catch (e) {
@@ -799,8 +812,8 @@ function maybeAlertLowBalance(account, total) {
     config.budgetAlertState[stateKey] = 'below';
     saveConfig();
     notify(
-      '余额预警',
-      `账户「${account.name}」余额 ¥${value.toFixed(2)} 已低于阈值 ¥${threshold}`
+      t('alert.title'),
+      t('alert.body', { name: account.name, balance: value.toFixed(2), threshold })
     );
   } else if (value >= threshold && prev === 'below') {
     config.budgetAlertState[stateKey] = 'ok';
@@ -899,13 +912,13 @@ function requestExternalJson(targetUrl, options = {}) {
 
 function usageErrorFromResult(result) {
   if (result.code === 40003 || String(result.error || '').toLowerCase().includes('invalid token')) {
-    return '用量 Token 无效或已过期，请重新同步';
+    return t('usage.tokenExpired');
   }
-  if (result.status === 401) return '用量 Token 无效或已过期，请重新同步';
-  if (result.status === 429) return '请求过于频繁，请稍后再试';
+  if (result.status === 401) return t('usage.tokenExpired');
+  if (result.status === 429) return t('usage.rateLimited');
   if (result.error) return result.error;
-  if (result.status) return `用量接口错误：HTTP ${result.status}`;
-  return result.error || '用量查询失败';
+  if (result.status) return t('usage.httpError', { status: result.status });
+  return result.error || t('usage.queryFailed');
 }
 
 function tokenBreakdown(entries = []) {
@@ -1058,7 +1071,7 @@ function normalizeUsage(amountData, costData) {
 async function fetchUsageMonth(month, year) {
   const usageToken = getActiveUsageToken();
   if (!usageToken) {
-    return { success: false, error: '未配置用量 Token' };
+    return { success: false, notConfigured: true, error: t('usage.tokenNotConfigured') };
   }
 
   const amountUrl = `https://platform.deepseek.com/api/v0/usage/amount?month=${month}&year=${year}`;
@@ -1114,7 +1127,7 @@ function startUsageSyncWindow() {
   normalizeConfig();
   const provider = getActiveProvider();
   const loginUrl = provider.loginUrl;
-  if (!loginUrl) return { success: false, error: 'DeepSeek 未配置官网入口' };
+  if (!loginUrl) return { success: false, error: t('err.noLoginUrl') };
 
   if (usageSyncWindow && !usageSyncWindow.isDestroyed()) {
     usageSyncWindow.show();
@@ -1130,7 +1143,7 @@ function startUsageSyncWindow() {
     height: 720,
     minWidth: 380,
     minHeight: 520,
-    title: 'DeepSeek 账号登录',
+    title: t('login.windowTitle'),
     show: true,
     webPreferences: {
       nodeIntegration: false,
@@ -1211,14 +1224,23 @@ ipcMain.handle('get-config', () => {
     packaged: app.isPackaged,
     hasApiKey: !!(account && account.apiKey),
     hasUsageToken: !!(account && account.usageToken),
-    configPath: configDir
+    configPath: configDir,
+    language: config.language
   };
+});
+
+ipcMain.handle('save-language', (event, language) => {
+  config.language = i18n.normalizeLanguage(language);
+  saveConfig();
+  if (tray) tray.setContextMenu(buildTrayMenu());
+  if (usageSyncWindow && !usageSyncWindow.isDestroyed()) usageSyncWindow.setTitle(t('login.windowTitle'));
+  return { success: true, language: config.language };
 });
 
 // Multi-account management
 ipcMain.handle('add-account', (event, name) => {
   const trimmed = String(name || '').trim();
-  if (!trimmed) return { success: false, error: '账户名称不能为空' };
+  if (!trimmed) return { success: false, error: t('err.accountNameEmpty') };
   const account = { id: crypto.randomUUID(), name: trimmed.slice(0, 30), apiKey: '', usageToken: '' };
   config.accounts.push(account);
   config.activeAccountId = account.id;
@@ -1227,9 +1249,9 @@ ipcMain.handle('add-account', (event, name) => {
 });
 
 ipcMain.handle('delete-account', (event, id) => {
-  if (config.accounts.length <= 1) return { success: false, error: '至少保留一个账户' };
+  if (config.accounts.length <= 1) return { success: false, error: t('settings.accounts.keepOne') };
   const index = config.accounts.findIndex((a) => a.id === id);
-  if (index < 0) return { success: false, error: '账户不存在' };
+  if (index < 0) return { success: false, error: t('err.accountNotFound') };
   config.accounts.splice(index, 1);
   if (config.activeAccountId === id) config.activeAccountId = config.accounts[0].id;
   delete config.budgetAlertState[id];
@@ -1238,7 +1260,7 @@ ipcMain.handle('delete-account', (event, id) => {
 });
 
 ipcMain.handle('set-active-account', (event, id) => {
-  if (!config.accounts.some((a) => a.id === id)) return { success: false, error: '账户不存在' };
+  if (!config.accounts.some((a) => a.id === id)) return { success: false, error: t('err.accountNotFound') };
   config.activeAccountId = id;
   saveConfig();
   return { success: true };
@@ -1256,9 +1278,9 @@ ipcMain.handle('save-api-key', async (event, apiKey) => {
 ipcMain.handle('save-usage-token', async (event, token) => {
   normalizeConfig();
   const value = String(token || '').trim();
-  if (!value) return { success: false, error: '用量 Token 不能为空' };
+  if (!value) return { success: false, error: t('err.tokenEmpty') };
   const valid = await verifyUsageTokenValue(value);
-  if (!valid) return { success: false, error: '用量 Token 无效或已过期，请重新获取' };
+  if (!valid) return { success: false, error: t('err.tokenInvalid') };
   const account = ensureAccount();
   account.usageToken = value;
   saveConfig();
@@ -1331,7 +1353,8 @@ ipcMain.handle('verify-api-key', async (event, apiKey) => {
 // Fetch balance
 ipcMain.handle('fetch-balance', async () => {
   const provider = getActiveProvider();
-  if (!provider.balancePath) return { success: false, unsupported: true, error: 'DeepSeek 未配置余额接口' };
+  if (!provider.balancePath) return { success: false, unsupported: true, error: t('err.noBalanceApi') };
+  if (!provider.apiKey) return { success: false, notConfigured: true, error: t('err.apiKeyNotConfigured') };
   const result = await requestProvider(provider.balancePath);
   if (!result.success) return result;
   const account = getActiveAccount();
@@ -1362,7 +1385,7 @@ ipcMain.handle('fetch-usage', async (event, params) => {
 ipcMain.handle('open-browser-login', async () => {
   const provider = getActiveProvider();
   const target = provider.loginUrl || provider.baseUrl;
-  if (!target) return { success: false, error: 'DeepSeek 未配置官网入口' };
+  if (!target) return { success: false, error: t('err.noLoginUrl') };
   await shell.openExternal(target);
   return { success: true };
 });
@@ -1371,12 +1394,12 @@ ipcMain.handle('start-usage-sync', async () => startUsageSyncWindow());
 
 // Auto update
 ipcMain.handle('check-for-updates', async () => {
-  if (!app.isPackaged) return { success: false, error: '开发模式不支持自动更新，请使用安装版' };
+  if (!app.isPackaged) return { success: false, error: t('update.devMode') };
   try {
     await autoUpdater.checkForUpdates();
     return { success: true };
   } catch (e) {
-    return { success: false, error: e.message || '检查更新失败' };
+    return { success: false, error: e.message || t('update.checkFailed') };
   }
 });
 
