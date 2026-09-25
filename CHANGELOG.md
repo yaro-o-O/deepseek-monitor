@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The usage-token sign-in window only inspects requests to `https://platform.deepseek.com`, so bearer tokens of other sites are never captured or sent for verification; the request hook is removed when the window closes
 - Server error messages and account names are rendered as text instead of HTML
 - Updated `js-yaml` to 4.3.2 (GHSA-2883-xcg3-v3hh)
+- Updated `electron-builder` from 24.13.3 to 26.15.3, clearing the remaining build-tool advisories (including `tar` path traversal and `builder-util-runtime` credential leak on redirects)
 - `package-lock.json` now resolves packages from the official npm registry (added `.npmrc`); all integrity hashes are unchanged
 - Removed unused `requestExternalJson` helper
 
