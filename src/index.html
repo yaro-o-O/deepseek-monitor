@@ -418,29 +418,29 @@
         <h1 id="brandTitle">AI Model Monitor</h1>
       </div>
       <div class="actions">
-        <button class="icon-btn" id="refreshBtn" title="刷新" aria-label="刷新">↻</button>
-        <button class="icon-btn" id="settingsBtn" title="设置" aria-label="设置">⚙</button>
-        <button class="icon-btn" id="backBtn" title="返回" aria-label="返回" style="display:none;">←</button>
-        <button class="icon-btn" title="最小化" aria-label="最小化" id="minBtn">−</button>
-        <button class="icon-btn danger" title="关闭" aria-label="关闭" id="closeBtn">×</button>
+        <button class="icon-btn" id="refreshBtn" data-i18n-title="app.refresh">↻</button>
+        <button class="icon-btn" id="settingsBtn" data-i18n-title="app.settings">⚙</button>
+        <button class="icon-btn" id="backBtn" data-i18n-title="app.back" style="display:none;">←</button>
+        <button class="icon-btn" data-i18n-title="app.minimize" id="minBtn">−</button>
+        <button class="icon-btn danger" data-i18n-title="app.close" id="closeBtn">×</button>
       </div>
     </header>
 
     <section class="view active" id="dashboardView">
       <article class="card balance-card">
         <div class="row-title">
-          <div class="caption">▣ 账户余额</div>
-          <div class="status" id="balanceStatus">查询中</div>
+          <div class="caption" data-i18n="balance.caption">▣ 账户余额</div>
+          <div class="status" id="balanceStatus" data-i18n="balance.querying">查询中</div>
         </div>
-        <div class="balance-amount dim" id="balanceAmount">查询中...</div>
+        <div class="balance-amount dim" id="balanceAmount" data-i18n="balance.queryingLong">查询中...</div>
         <div class="balance-error" id="balanceError" style="display:none;"></div>
         <div class="metric-grid">
           <div class="mini-card">
-            <div class="caption">☀ 当日消耗</div>
+            <div class="caption" data-i18n="cost.today">☀ 当日消耗</div>
             <strong id="todayCost">—</strong>
           </div>
           <div class="mini-card">
-            <div class="caption">▦ 本月消费</div>
+            <div class="caption" data-i18n="cost.month">▦ 本月消费</div>
             <strong id="monthCost">—</strong>
           </div>
         </div>
@@ -476,14 +476,14 @@
 
       <article class="card chart-card">
         <div class="row-title">
-          <div class="caption">▥ 最近 7 天 Token 趋势</div>
+          <div class="caption" data-i18n="chart.trend">▥ 最近 7 天 Token 趋势</div>
           <div class="chart-meta" id="chartMeta">—</div>
         </div>
         <div class="bars" id="trendBars"></div>
         <div class="legend">
-          <span><i class="dot hit"></i>命中</span>
-          <span><i class="dot miss"></i>未命中</span>
-          <span><i class="dot out"></i>输出</span>
+          <span><i class="dot hit"></i><span data-i18n="chart.hit">命中</span></span>
+          <span><i class="dot miss"></i><span data-i18n="chart.miss">未命中</span></span>
+          <span><i class="dot out"></i><span data-i18n="chart.out">输出</span></span>
         </div>
       </article>
       <div class="last-update" id="lastUpdate">—</div>
@@ -498,151 +498,157 @@
         </div>
       </article>
       <div class="detail-grid">
-        <article class="card detail-metric"><span>API 请求次数</span><strong id="detailRequests">—</strong></article>
+        <article class="card detail-metric"><span data-i18n="detail.requests">API 请求次数</span><strong id="detailRequests">—</strong></article>
         <article class="card detail-metric"><span>Tokens</span><strong id="detailTokens">—</strong></article>
       </div>
       <article class="card detail-chart">
         <div class="row-title">
-          <div class="caption">▥ 按日 Token 消耗</div>
+          <div class="caption" data-i18n="chart.daily">▥ 按日 Token 消耗</div>
           <div class="chart-meta" id="detailRange">—</div>
         </div>
         <div class="bars" id="detailBars"></div>
         <div class="legend">
-          <span><i class="dot hit"></i>命中</span>
-          <span><i class="dot miss"></i>未命中</span>
-          <span><i class="dot out"></i>输出</span>
+          <span><i class="dot hit"></i><span data-i18n="chart.hit">命中</span></span>
+          <span><i class="dot miss"></i><span data-i18n="chart.miss">未命中</span></span>
+          <span><i class="dot out"></i><span data-i18n="chart.out">输出</span></span>
         </div>
       </article>
     </section>
 
     <section class="view scroll-view settings-panel" id="settingsView">
       <section class="section">
-        <h3>👤 账户管理</h3>
-        <p>支持多个 DeepSeek 账户，数据获取始终针对当前选中的账户。</p>
+        <h3 data-i18n="settings.language.title">🌐 语言</h3>
+        <select id="languageSelect"></select>
+      </section>
+
+      <section class="section">
+        <h3 data-i18n="settings.accounts.title">👤 账户管理</h3>
+        <p data-i18n="settings.accounts.desc">支持多个 DeepSeek 账户，数据获取始终针对当前选中的账户。</p>
         <div style="display:flex; gap:8px; align-items:center;">
           <select id="accountSelect" style="flex:1;"></select>
-          <button class="secondary" id="deleteAccountBtn" title="删除当前账户" style="min-height:32px;">删除</button>
+          <button class="secondary" id="deleteAccountBtn" data-i18n="settings.accounts.delete" style="min-height:32px;">删除</button>
         </div>
         <div class="settings-actions">
-          <input id="newAccountName" placeholder="新账户名称" style="flex:1;">
-          <button class="secondary" id="addAccountBtn">添加账户</button>
+          <input id="newAccountName" data-i18n-placeholder="settings.accounts.newPlaceholder" style="flex:1;">
+          <button class="secondary" id="addAccountBtn" data-i18n="settings.accounts.add">添加账户</button>
         </div>
         <p class="faint" id="accountMessage"></p>
       </section>
 
       <section class="section">
         <h3>🔑 API Key</h3>
-        <p>用于调用 DeepSeek 官方余额接口。</p>
+        <p data-i18n="settings.apiKey.desc">用于调用 DeepSeek 官方余额接口。</p>
         <p class="faint" id="configPath">—</p>
         <input id="apiKeyInput" type="password" placeholder="sk-...">
         <div class="settings-actions">
-          <button class="primary" id="saveKeyBtn">验证并保存</button>
+          <button class="primary" id="saveKeyBtn" data-i18n="settings.apiKey.save">验证并保存</button>
           <span class="configured off" id="keyState">未配置</span>
-          <button class="secondary" id="clearKeyBtn">清除 Key</button>
+          <button class="secondary" id="clearKeyBtn" data-i18n="settings.apiKey.clear">清除 Key</button>
         </div>
         <p class="faint" id="keyMessage"></p>
       </section>
 
       <section class="section">
-        <h3>▥ 用量同步 Token</h3>
-        <p>用于读取 DeepSeek 平台用量数据，包括消费、请求数、缓存命中、缓存未命中和输出 Token。</p>
+        <h3 data-i18n="settings.token.title">▥ 用量同步 Token</h3>
+        <p data-i18n="settings.token.desc">用于读取 DeepSeek 平台用量数据，包括消费、请求数、缓存命中、缓存未命中和输出 Token。</p>
         <div class="settings-actions">
-          <button class="primary" id="syncTokenBtn">网页登录自动同步</button>
+          <button class="primary" id="syncTokenBtn" data-i18n="settings.token.sync">网页登录检测</button>
           <span class="configured off" id="tokenState">未配置</span>
-          <button class="secondary" id="clearTokenBtn">清除 Token</button>
+          <button class="secondary" id="clearTokenBtn" data-i18n="settings.token.clear">清除 Token</button>
         </div>
         <p class="faint" id="tokenMessage">自动同步会打开 DeepSeek 登录窗口，登录后自动保存用量 Token。</p>
-        <button class="link" id="toggleManualBtn">方式二：手动粘贴 Token</button>
+        <button class="link" id="toggleManualBtn" data-i18n="settings.token.manualToggle">方式二：手动粘贴 Token</button>
         <div id="manualTokenBox" style="display:none;">
-          <p class="faint">如果网页登录检测不到，可从 DeepSeek 网页会话中复制 Bearer token 粘贴到这里。</p>
+          <p class="faint" data-i18n="settings.token.manualHint">如果网页登录检测不到，可从 DeepSeek 网页会话中复制 Bearer token 粘贴到这里。</p>
           <input id="usageTokenInput" type="password">
           <div class="settings-actions">
-            <button class="primary" id="saveTokenBtn">保存 Token</button>
+            <button class="primary" id="saveTokenBtn" data-i18n="settings.token.save">保存 Token</button>
           </div>
         </div>
       </section>
 
       <section class="section">
-        <h3>⏻ 开机自启</h3>
+        <h3 data-i18n="settings.autoLaunch.title">⏻ 开机自启</h3>
         <label class="toggle-row">
-          <span>登录 Windows 时自动启动</span>
+          <span data-i18n="settings.autoLaunch.label">登录 Windows 时自动启动</span>
           <input type="checkbox" id="autoLaunchToggle">
           <i></i>
         </label>
       </section>
 
       <section class="section">
-        <h3>📌 窗口置顶</h3>
-        <p>应用始终驻留系统托盘，不显示任务栏/Dock 图标；开启置顶后窗口悬浮于其他应用之上。</p>
+        <h3 data-i18n="settings.onTop.title">📌 窗口置顶</h3>
+        <p data-i18n="settings.onTop.desc">应用始终驻留系统托盘，不显示任务栏/Dock 图标；开启置顶后窗口悬浮于其他应用之上。</p>
         <label class="toggle-row">
-          <span>启用窗口置顶</span>
+          <span data-i18n="settings.onTop.enable">启用窗口置顶</span>
           <input type="checkbox" id="alwaysOnTopToggle">
           <i></i>
         </label>
         <div id="onTopOptions" style="display:none; margin-top:10px;">
-          <p>鼠标悬停在窗口上时：</p>
+          <p data-i18n="settings.onTop.hoverLabel">鼠标悬停在窗口上时：</p>
           <div class="segmented" id="onTopBehaviorSegments" style="grid-template-columns: repeat(3, minmax(0, 1fr));">
-            <button data-behavior="none">保持原样</button>
-            <button data-behavior="hide">自动隐藏</button>
-            <button data-behavior="fade">半透明</button>
+            <button data-behavior="none" data-i18n="onTop.none">保持原样</button>
+            <button data-behavior="hide" data-i18n="onTop.hide">自动隐藏</button>
+            <button data-behavior="fade" data-i18n="onTop.fade">半透明</button>
           </div>
           <div id="opacityRow" style="display:none; margin-top:12px;">
             <div style="display:flex; justify-content:space-between; color:var(--muted); font-size:11px; font-weight:900; margin-bottom:6px;">
-              <span>半透明透明度</span>
+              <span data-i18n="settings.onTop.opacity">半透明透明度</span>
               <span id="opacityValue">35%</span>
             </div>
             <input type="range" id="opacityRange" min="10" max="90" step="5" value="35">
           </div>
-          <p class="faint">鼠标移开后自动恢复为不透明；悬停期间窗口可点击穿透，不遮挡桌面操作。</p>
+          <p class="faint" data-i18n="settings.onTop.hint">鼠标移开后自动恢复为不透明；悬停期间窗口可点击穿透，不遮挡桌面操作。</p>
         </div>
       </section>
 
       <section class="section">
-        <h3>↻ 自动刷新</h3>
+        <h3 data-i18n="settings.refresh.title">↻ 自动刷新</h3>
         <label class="toggle-row">
-          <span>启用自动刷新</span>
+          <span data-i18n="settings.refresh.enable">启用自动刷新</span>
           <input type="checkbox" id="autoRefreshToggle">
           <i></i>
         </label>
         <div class="segmented" id="refreshSegments">
-          <button data-seconds="60">1 分钟</button>
-          <button data-seconds="300">5 分钟</button>
-          <button data-seconds="1800">30 分钟</button>
-          <button data-seconds="3600">1 小时</button>
+          <button data-seconds="60" data-i18n="refresh.1m">1 分钟</button>
+          <button data-seconds="300" data-i18n="refresh.5m">5 分钟</button>
+          <button data-seconds="1800" data-i18n="refresh.30m">30 分钟</button>
+          <button data-seconds="3600" data-i18n="refresh.1h">1 小时</button>
         </div>
       </section>
 
       <section class="section">
-        <h3>💡 余额预警</h3>
-        <p>余额低于阈值时发送系统通知（同一账户只提醒一次，直到余额回升）。</p>
+        <h3 data-i18n="settings.budget.title">💡 余额预警</h3>
+        <p data-i18n="settings.budget.desc">余额低于阈值时发送系统通知（同一账户只提醒一次，直到余额回升）。</p>
         <label class="toggle-row">
-          <span>启用余额预警</span>
+          <span data-i18n="settings.budget.enable">启用余额预警</span>
           <input type="checkbox" id="budgetAlertToggle">
           <i></i>
         </label>
         <div class="settings-actions">
           <input id="balanceThresholdInput" type="number" min="0" step="1" placeholder="50" style="width:110px; flex:0 0 auto;">
-          <button class="secondary" id="saveBudgetBtn">保存阈值</button>
+          <button class="secondary" id="saveBudgetBtn" data-i18n="settings.budget.save">保存阈值</button>
           <span class="faint" id="budgetMessage"></span>
         </div>
       </section>
 
       <section class="section">
-        <h3>⬆ 软件更新</h3>
+        <h3 data-i18n="settings.update.title">⬆ 软件更新</h3>
         <p class="faint" id="updateStatus">检查更新后如有新版本将自动下载。</p>
         <div class="settings-actions">
-          <button class="primary" id="checkUpdateBtn">检查更新</button>
-          <button class="secondary" id="installUpdateBtn" style="display:none;">重启并安装</button>
+          <button class="primary" id="checkUpdateBtn" data-i18n="settings.update.check">检查更新</button>
+          <button class="secondary" id="installUpdateBtn" data-i18n="settings.update.install" style="display:none;">重启并安装</button>
         </div>
       </section>
 
       <section class="section">
-        <h3>ℹ 关于</h3>
+        <h3 data-i18n="settings.about.title">ℹ 关于</h3>
         <p>DeepSeek Monitor v1.2.0</p>
       </section>
     </section>
   </main>
 
+  <script src="i18n.js"></script>
   <script>
     const $ = (id) => document.getElementById(id);
     const state = {
@@ -652,11 +658,57 @@
       view: 'dashboard',
       detailModel: 'flash',
       refreshTimer: null,
-      loading: false
+      loading: false,
+      lastUpdate: null,
+      updatePayload: null,
+      balanceCurrency: null
     };
 
+    const t = (key, params) => I18N.translate(state.config.language, key, params);
+
+    function applyI18n() {
+      document.documentElement.lang = I18N.normalizeLanguage(state.config.language);
+      document.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = t(el.dataset.i18n); });
+      document.querySelectorAll('[data-i18n-title]').forEach((el) => {
+        el.title = t(el.dataset.i18nTitle);
+        el.setAttribute('aria-label', el.title);
+      });
+      document.querySelectorAll('[data-i18n-placeholder]').forEach((el) => { el.placeholder = t(el.dataset.i18nPlaceholder); });
+      const select = $('languageSelect');
+      select.innerHTML = I18N.LANGUAGES.map((lang) => `<option value="${lang.code}">${lang.name}</option>`).join('');
+      select.value = I18N.normalizeLanguage(state.config.language);
+      renderLastUpdate();
+      renderUpdateStatus();
+    }
+
+    function renderLastUpdate() {
+      $('lastUpdate').textContent = state.lastUpdate
+        ? t('lastUpdate', { time: state.lastUpdate.toLocaleTimeString(I18N.localeOf(state.config.language)) })
+        : '—';
+    }
+
+    function renderUpdateStatus() {
+      const payload = state.updatePayload;
+      const keys = {
+        available: 'update.available',
+        'not-available': 'update.notAvailable',
+        downloading: 'update.downloading',
+        downloaded: 'update.downloaded',
+        error: 'update.error'
+      };
+      if (!payload) {
+        $('updateStatus').textContent = t('settings.update.hint');
+      } else if (keys[payload.status]) {
+        $('updateStatus').textContent = t(keys[payload.status], { error: payload.error || '' });
+      } else {
+        $('updateStatus').textContent = payload.message || '';
+      }
+    }
+
     const fmtInt = (n) => Math.round(Number(n || 0)).toLocaleString('en-US');
-    const fmtMoney = (n) => Number.isFinite(Number(n)) ? '¥' + Number(n).toFixed(2) : '—';
+    // Usage costs are labelled with the usage API's currency, falling back to the balance currency.
+    const costCurrency = () => state.usage?.currency || state.balanceCurrency || 'CNY';
+    const fmtMoney = (n, currency = costCurrency()) => I18N.formatMoney(n, currency);
     const fmtTokensShort = (n) => {
       n = Number(n || 0);
       if (n >= 1e8) return (n / 1e6).toFixed(0) + 'M';
@@ -704,10 +756,10 @@
       if (view === 'detail') renderDetail();
     }
 
-    function setBalanceError(message, stateName = 'off') {
-      $('balanceStatus').textContent = stateName === 'off' ? '不可用' : '查询失败';
+    function setBalanceError(message, notConfigured = false, stateName = 'off') {
+      $('balanceStatus').textContent = stateName === 'off' ? t('balance.unavailable') : t('balance.failed');
       $('balanceStatus').classList.add('off');
-      $('balanceAmount').textContent = message.includes('未配置') ? '未配置' : '查询失败';
+      $('balanceAmount').textContent = notConfigured ? t('balance.notConfigured') : t('balance.failed');
       $('balanceAmount').classList.add('dim');
       $('balanceError').textContent = message;
       $('balanceError').style.display = 'block';
@@ -716,16 +768,22 @@
     function renderBalance(result) {
       $('balanceError').style.display = 'none';
       if (!result?.success || !result.data) {
-        setBalanceError(result?.error || '余额查询失败');
+        setBalanceError(result?.error || t('balance.queryError'), !!(result?.notConfigured || result?.unsupported));
         return;
       }
       const data = result.data;
       const infos = data.balance_infos || [];
-      const total = infos.reduce((sum, item) => sum + Number(item.total_balance || 0), 0);
+      const totals = new Map();
+      for (const item of infos) {
+        const currency = item.currency || 'CNY';
+        totals.set(currency, (totals.get(currency) || 0) + Number(item.total_balance || 0));
+      }
+      if (!totals.size) totals.set('CNY', 0);
+      state.balanceCurrency = totals.keys().next().value;
       const available = data.is_available !== false;
-      $('balanceStatus').textContent = available ? '可用' : '余额不足';
+      $('balanceStatus').textContent = available ? t('balance.available') : t('balance.insufficient');
       $('balanceStatus').classList.toggle('off', !available);
-      $('balanceAmount').textContent = fmtMoney(total);
+      $('balanceAmount').textContent = Array.from(totals, ([currency, total]) => fmtMoney(total, currency)).join(' + ');
       $('balanceAmount').classList.remove('dim');
     }
 
@@ -744,15 +802,15 @@
       const legend = document.querySelector('.trend-card .legend');
       if (!legend) return;
       legend.innerHTML = mode === 'cost'
-        ? '<span><i class="dot out"></i>消费金额</span>'
-        : '<span><i class="dot hit"></i>命中</span><span><i class="dot miss"></i>未命中</span><span><i class="dot out"></i>输出</span>';
+        ? `<span><i class="dot out"></i>${t('chart.cost')}</span>`
+        : `<span><i class="dot hit"></i>${t('chart.hit')}</span><span><i class="dot miss"></i>${t('chart.miss')}</span><span><i class="dot out"></i>${t('chart.out')}</span>`;
     }
 
     function renderUsageRow(key, data, maxTokens) {
       $(key + 'Tokens').textContent = data ? fmtInt(data.totalTokens) + ' Tokens' : '—';
       $(key + 'Cost').textContent = data ? fmtMoney(data.cost) : '—';
-      $(key + 'Ratio').textContent = data && data.cost > 0 ? fmtTokensShort(data.totalTokens / data.cost) + ' T/¥' : '—';
-      $(key + 'HitRate').textContent = '缓存命中 ' + (data ? hitRate(data) : '—');
+      $(key + 'Ratio').textContent = data && data.cost > 0 ? fmtTokensShort(data.totalTokens / data.cost) + ' T/' + I18N.currencySymbol(costCurrency()).trim() : '—';
+      $(key + 'HitRate').textContent = t('usage.cacheHit', { rate: data ? hitRate(data) : '—' });
       $(key + 'Progress').style.width = data ? Math.max(2, data.totalTokens / maxTokens * 100) + '%' : '0%';
     }
 
@@ -762,7 +820,7 @@
       const hit = points.reduce((sum, p) => sum + p.hit, 0);
       const miss = points.reduce((sum, p) => sum + p.miss, 0);
       const hitText = hit + miss > 0 ? Math.round(hit / (hit + miss) * 100) + '%' : '0%';
-      $(metaId).textContent = `命中率 ${hitText} · 合计 ${fmtTokensShort(total)}`;
+      $(metaId).textContent = t('chart.meta', { rate: hitText, total: fmtTokensShort(total) });
       $(targetId).innerHTML = points.map((point) => {
         const height = point.total > 0 ? Math.max(3, point.total / max * 100) : 3;
         return `
@@ -781,9 +839,9 @@
             ${point.total > 0 ? `
               <div class="tooltip">
                 <header><span>${point.date}</span><strong>${fmtInt(point.total)} tokens</strong></header>
-                <div class="tip-row"><i class="dot hit"></i>输入（命中缓存）<strong>${fmtInt(point.hit)}</strong></div>
-                <div class="tip-row"><i class="dot miss"></i>输入（未命中缓存）<strong>${fmtInt(point.miss)}</strong></div>
-                <div class="tip-row"><i class="dot out"></i>输出<strong>${fmtInt(point.out)}</strong></div>
+                <div class="tip-row"><i class="dot hit"></i>${t('chart.tipHit')}<strong>${fmtInt(point.hit)}</strong></div>
+                <div class="tip-row"><i class="dot miss"></i>${t('chart.tipMiss')}<strong>${fmtInt(point.miss)}</strong></div>
+                <div class="tip-row"><i class="dot out"></i>${t('chart.out')}<strong>${fmtInt(point.out)}</strong></div>
               </div>
             ` : ''}
           </div>
@@ -822,17 +880,27 @@
       renderBars('detailBars', points, 'detailRange');
     }
 
+    // Error messages can come from the server: render them as text, never as HTML.
+    function placeholderEl(message) {
+      const el = document.createElement('div');
+      el.className = 'placeholder';
+      el.style.gridColumn = '1/-1';
+      el.textContent = message;
+      return el;
+    }
+
     function renderUsageError(message) {
       state.usage = null;
       $('todayCost').textContent = '—';
       $('monthCost').textContent = '—';
       renderUsageRows();
-      $('chartMeta').textContent = message || '暂无数据';
-      $('trendBars').innerHTML = '<div class="placeholder" style="grid-column:1/-1;">' + (message || '暂无数据') + '</div>';
+      message = message || t('usage.noData');
+      $('chartMeta').textContent = message;
+      $('trendBars').replaceChildren(placeholderEl(message));
       if (state.view === 'detail') {
         renderDetail();
-        $('detailRange').textContent = message || '暂无数据';
-        $('detailBars').innerHTML = '<div class="placeholder" style="grid-column:1/-1;">' + (message || '暂无数据') + '</div>';
+        $('detailRange').textContent = message;
+        $('detailBars').replaceChildren(placeholderEl(message));
       }
     }
 
@@ -865,11 +933,12 @@
           renderTrend();
           if (state.view === 'detail') renderDetail();
         } else {
-          renderUsageError(usageResult.error || '用量查询失败');
+          renderUsageError(usageResult.error || t('usage.queryFailed'));
         }
-        $('lastUpdate').textContent = '最后更新：' + new Date().toLocaleTimeString('zh-CN');
+        state.lastUpdate = new Date();
+        renderLastUpdate();
       } catch (error) {
-        renderUsageError('数据刷新失败');
+        renderUsageError(t('usage.refreshFailed'));
       } finally {
         state.loading = false;
         $('refreshBtn').textContent = '↻';
@@ -881,18 +950,16 @@
       $('brandTitle').textContent = 'DeepSeek Monitor';
       $('configPath').textContent = cfg.configPath || '—';
       renderAccountSelect();
-      $('keyState').textContent = cfg.hasApiKey ? '已配置' : '未配置';
+      $('keyState').textContent = cfg.hasApiKey ? t('state.configured') : t('state.notConfigured');
       $('keyState').classList.toggle('off', !cfg.hasApiKey);
-      $('tokenState').textContent = cfg.hasUsageToken ? '已配置' : '未配置';
+      $('tokenState').textContent = cfg.hasUsageToken ? t('state.configured') : t('state.notConfigured');
       $('tokenState').classList.toggle('off', !cfg.hasUsageToken);
       $('syncTokenBtn').disabled = false;
-      $('syncTokenBtn').textContent = '网页登录检测';
       $('toggleManualBtn').disabled = false;
-      $('toggleManualBtn').textContent = '方式二：手动粘贴 Token';
       $('clearTokenBtn').disabled = !cfg.hasUsageToken;
-      $('tokenMessage').textContent = '自动同步会打开 DeepSeek 登录窗口，登录后自动保存用量 Token。';
+      $('tokenMessage').textContent = t('settings.token.hint');
       $('manualTokenBox').style.display = $('manualTokenBox').style.display === 'block' ? 'block' : 'none';
-      $('apiKeyInput').placeholder = cfg.hasApiKey ? '已配置，输入新 Key 可覆盖' : 'sk-...';
+      $('apiKeyInput').placeholder = cfg.hasApiKey ? t('settings.apiKey.placeholderSet') : 'sk-...';
       $('autoLaunchToggle').checked = !!cfg.autoLaunch;
       $('autoRefreshToggle').checked = cfg.autoRefreshEnabled !== false;
       $('budgetAlertToggle').checked = cfg.budgetAlertEnabled !== false;
@@ -916,14 +983,21 @@
       scheduleAutoRefresh();
     }
 
+    // The auto-created account is stored under its localized default name; show it in the current language.
+    function accountLabel(name) {
+      const isDefault = I18N.LANGUAGES.some((lang) => I18N.translate(lang.code, 'account.default') === name);
+      return isDefault ? t('account.default') : name;
+    }
+
     function renderAccountSelect() {
       const select = $('accountSelect');
-      select.innerHTML = (state.config.accounts || []).map((account) =>
-        `<option value="${account.id}">${account.name}${account.hasApiKey ? ' ✓' : ''}</option>`
-      ).join('');
+      // Account names are user input: build options as text, never as HTML.
+      select.replaceChildren(...(state.config.accounts || []).map((account) =>
+        new Option(accountLabel(account.name) + (account.hasApiKey ? ' ✓' : ''), account.id)
+      ));
       select.value = state.config.activeAccountId || '';
       $('deleteAccountBtn').disabled = (state.config.accounts || []).length <= 1;
-      $('deleteAccountBtn').title = (state.config.accounts || []).length <= 1 ? '至少保留一个账户' : '删除当前账户';
+      $('deleteAccountBtn').title = (state.config.accounts || []).length <= 1 ? t('settings.accounts.keepOne') : t('settings.accounts.deleteTitle');
     }
 
     function scheduleAutoRefresh() {
@@ -976,36 +1050,36 @@
       $('saveKeyBtn').addEventListener('click', async () => {
         const key = $('apiKeyInput').value.trim();
         if (!key) return;
-        $('keyMessage').textContent = '正在验证...';
+        $('keyMessage').textContent = t('settings.apiKey.verifying');
         const result = await window.dsAPI.verifyApiKey(key);
         if (!result.success) {
-          $('keyMessage').textContent = '验证失败：' + (result.error || ('HTTP ' + (result.status || '')));
+          $('keyMessage').textContent = t('settings.apiKey.verifyFailed', { error: result.error || ('HTTP ' + (result.status || '')) });
           return;
         }
         await window.dsAPI.saveApiKey(key);
         $('apiKeyInput').value = '';
-        $('keyMessage').textContent = '验证通过，已保存';
+        $('keyMessage').textContent = t('settings.apiKey.saved');
         await loadConfig();
         refreshAll();
       });
       $('clearKeyBtn').addEventListener('click', async () => {
         await window.dsAPI.clearApiKey();
-        $('keyMessage').textContent = '已清除 API Key';
+        $('keyMessage').textContent = t('settings.apiKey.cleared');
         await loadConfig();
         refreshAll();
       });
       $('syncTokenBtn').addEventListener('click', async () => {
-        $('tokenMessage').textContent = '正在打开登录窗口并检测登录状态...';
+        $('tokenMessage').textContent = t('settings.token.opening');
         const result = await window.dsAPI.startUsageSync();
         $('tokenMessage').textContent = result.success
-          ? '登录后会自动检测 Token；如果已经登录，请等待页面加载完成。'
-          : (result.error || '打开登录窗口失败');
+          ? t('settings.token.waiting')
+          : (result.error || t('settings.token.openFailed'));
       });
       $('clearTokenBtn').addEventListener('click', async () => {
         await window.dsAPI.clearUsageToken();
-        $('tokenMessage').textContent = '已清除用量 Token';
+        $('tokenMessage').textContent = t('settings.token.cleared');
         await loadConfig();
-        renderUsageError('未配置用量 Token');
+        renderUsageError(t('usage.tokenNotConfigured'));
       });
       $('toggleManualBtn').addEventListener('click', () => {
         const box = $('manualTokenBox');
@@ -1014,14 +1088,14 @@
       $('saveTokenBtn').addEventListener('click', async () => {
         const token = $('usageTokenInput').value.trim();
         if (!token) return;
-        $('tokenMessage').textContent = '正在验证用量 Token...';
+        $('tokenMessage').textContent = t('settings.token.verifying');
         const result = await window.dsAPI.saveUsageToken(token);
         if (!result.success) {
-          $('tokenMessage').textContent = '保存失败：' + (result.error || 'Token 无效');
+          $('tokenMessage').textContent = t('settings.token.saveFailed', { error: result.error || t('settings.token.invalid') });
           return;
         }
         $('usageTokenInput').value = '';
-        $('tokenMessage').textContent = '已保存，正在刷新用量数据...';
+        $('tokenMessage').textContent = t('settings.token.saved');
         await loadConfig();
         refreshAll();
       });
@@ -1058,12 +1132,21 @@
         document.body.style.opacity = '1';
       });
       window.dsAPI.onUsageTokenCaptured(async () => {
-        $('tokenMessage').textContent = '已检测到登录状态并保存 Token';
+        $('tokenMessage').textContent = t('settings.token.captured');
         await loadConfig();
         refreshAll();
       });
       window.dsAPI.onUsageSyncEnded(() => {
-        $('tokenMessage').textContent = '登录窗口已关闭，未检测到 Token，可手动保存 Token。';
+        $('tokenMessage').textContent = t('settings.token.syncEnded');
+      });
+
+      // Language
+      $('languageSelect').addEventListener('change', async (event) => {
+        const result = await window.dsAPI.saveLanguage(event.target.value);
+        if (result && result.success) state.config.language = result.language;
+        applyI18n();
+        applyConfigToSettings();
+        refreshAll();
       });
 
       // Account management
@@ -1076,21 +1159,21 @@
       });
       $('addAccountBtn').addEventListener('click', async () => {
         const name = $('newAccountName').value.trim();
-        if (!name) { $('accountMessage').textContent = '请输入账户名称'; return; }
+        if (!name) { $('accountMessage').textContent = t('settings.accounts.enterName'); return; }
         const result = await window.dsAPI.addAccount(name);
-        if (!result.success) { $('accountMessage').textContent = result.error || '添加失败'; return; }
+        if (!result.success) { $('accountMessage').textContent = result.error || t('settings.accounts.addFailed'); return; }
         $('newAccountName').value = '';
-        $('accountMessage').textContent = '已添加并切换到新账户';
+        $('accountMessage').textContent = t('settings.accounts.added');
         await loadConfig();
         refreshAll();
       });
       $('deleteAccountBtn').addEventListener('click', async () => {
         const id = state.config.activeAccountId;
-        const name = (state.config.accounts || []).find((a) => a.id === id)?.name || '';
-        if (!window.confirm(`确定删除账户「${name}」？其 API Key 与用量 Token 将一并清除。`)) return;
+        const name = accountLabel((state.config.accounts || []).find((a) => a.id === id)?.name || '');
+        if (!window.confirm(t('settings.accounts.confirmDelete', { name }))) return;
         const result = await window.dsAPI.deleteAccount(id);
-        if (!result.success) { $('accountMessage').textContent = result.error || '删除失败'; return; }
-        $('accountMessage').textContent = '账户已删除';
+        if (!result.success) { $('accountMessage').textContent = result.error || t('settings.accounts.deleteFailed'); return; }
+        $('accountMessage').textContent = t('settings.accounts.deleted');
         await loadConfig();
         refreshAll();
       });
@@ -1102,26 +1185,27 @@
           balanceThreshold: $('balanceThresholdInput').value || state.config.balanceThreshold
         });
         if (result.success) state.config = { ...state.config, ...result };
-        $('budgetMessage').textContent = event.target.checked ? '预警已启用' : '预警已关闭';
+        $('budgetMessage').textContent = event.target.checked ? t('settings.budget.enabled') : t('settings.budget.disabled');
       });
       $('saveBudgetBtn').addEventListener('click', async () => {
         const threshold = Number($('balanceThresholdInput').value);
-        if (!Number.isFinite(threshold) || threshold < 0) { $('budgetMessage').textContent = '请输入有效的阈值'; return; }
+        if (!Number.isFinite(threshold) || threshold < 0) { $('budgetMessage').textContent = t('settings.budget.invalid'); return; }
         const result = await window.dsAPI.saveBudgetOptions({
           budgetAlertEnabled: $('budgetAlertToggle').checked,
           balanceThreshold: threshold
         });
-        if (!result.success) { $('budgetMessage').textContent = '保存失败'; return; }
+        if (!result.success) { $('budgetMessage').textContent = t('settings.budget.saveFailed'); return; }
         state.config = { ...state.config, ...result };
-        $('budgetMessage').textContent = '阈值已保存';
+        $('budgetMessage').textContent = t('settings.budget.saved');
       });
 
       // Auto update
       $('checkUpdateBtn').addEventListener('click', async () => {
-        $('updateStatus').textContent = '正在检查更新...';
+        state.updatePayload = null;
+        $('updateStatus').textContent = t('settings.update.checking');
         const result = await window.dsAPI.checkForUpdates();
         if (!result.success) {
-          $('updateStatus').textContent = result.error || '检查更新失败';
+          $('updateStatus').textContent = result.error || t('update.checkFailed');
         }
       });
       $('installUpdateBtn').addEventListener('click', () => {
@@ -1129,7 +1213,8 @@
       });
       window.dsAPI.onUpdateStatus((payload) => {
         if (!payload) return;
-        $('updateStatus').textContent = payload.message || '';
+        state.updatePayload = payload;
+        renderUpdateStatus();
         if (payload.status === 'downloaded') {
           $('installUpdateBtn').style.display = '';
         }
@@ -1139,7 +1224,8 @@
     async function init() {
       bindEvents();
       await loadConfig();
-      renderUsageError(state.config.hasUsageToken ? '正在查询用量...' : '未配置用量 Token');
+      applyI18n();
+      renderUsageError(state.config.hasUsageToken ? t('usage.querying') : t('usage.tokenNotConfigured'));
       await refreshAll();
     }
 

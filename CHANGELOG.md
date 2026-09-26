@@ -7,10 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **English localization** — the UI, tray menu, notifications and error messages are now available in English as well as Simplified Chinese
+- **Language selector** — pick the interface language from a dropdown at the top of Settings; Simplified Chinese stays the default and the choice is saved in the config
+
 ### Fixed
 
+- Money amounts are now labelled with the currency the DeepSeek API reports (e.g. `$` for USD accounts) instead of always showing `¥`
 - Launching the app again (Finder, Spotlight, Launchpad, Start menu) now brings back the window hidden to the tray instead of doing nothing or starting a second instance
 - The macOS menu bar icon is now a monochrome template image, so it matches the other menu bar icons in light and dark mode instead of showing the blue app icon
+
+### Security
+
+- Auto-updates are now published from and fetched from `yaro-o-O/deepseek-monitor`
+- The usage-token sign-in window only inspects requests to `https://platform.deepseek.com`, so bearer tokens of other sites are never captured or sent for verification; the request hook is removed when the window closes
+- Server error messages and account names are rendered as text instead of HTML
+- Updated `js-yaml` to 4.3.2 (GHSA-2883-xcg3-v3hh)
+- Updated `electron-builder` from 24.13.3 to 26.15.3, clearing the remaining build-tool advisories (including `tar` path traversal and `builder-util-runtime` credential leak on redirects)
+- `package-lock.json` now resolves packages from the official npm registry (added `.npmrc`); all integrity hashes are unchanged
+- Removed unused `requestExternalJson` helper
 
 ## [1.2.0] - 2026-08-11
 

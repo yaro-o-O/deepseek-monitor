@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('dsAPI', {
   saveRefreshOptions: (options) => ipcRenderer.invoke('save-refresh-options', options),
   saveBudgetOptions: (options) => ipcRenderer.invoke('save-budget-options', options),
   saveWindowOptions: (options) => ipcRenderer.invoke('save-window-options', options),
+  saveLanguage: (language) => ipcRenderer.invoke('save-language', language),
   verifyApiKey: (key) => ipcRenderer.invoke('verify-api-key', key),
   fetchBalance: () => ipcRenderer.invoke('fetch-balance'),
   fetchModels: () => ipcRenderer.invoke('fetch-models'),
