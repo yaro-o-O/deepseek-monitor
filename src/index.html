@@ -880,6 +880,15 @@
       renderBars('detailBars', points, 'detailRange');
     }
 
+    // Error messages can come from the server: render them as text, never as HTML.
+    function placeholderEl(message) {
+      const el = document.createElement('div');
+      el.className = 'placeholder';
+      el.style.gridColumn = '1/-1';
+      el.textContent = message;
+      return el;
+    }
+
     function renderUsageError(message) {
       state.usage = null;
       $('todayCost').textContent = '—';
@@ -887,11 +896,11 @@
       renderUsageRows();
       message = message || t('usage.noData');
       $('chartMeta').textContent = message;
-      $('trendBars').innerHTML = '<div class="placeholder" style="grid-column:1/-1;">' + message + '</div>';
+      $('trendBars').replaceChildren(placeholderEl(message));
       if (state.view === 'detail') {
         renderDetail();
         $('detailRange').textContent = message;
-        $('detailBars').innerHTML = '<div class="placeholder" style="grid-column:1/-1;">' + message + '</div>';
+        $('detailBars').replaceChildren(placeholderEl(message));
       }
     }
 
@@ -982,9 +991,10 @@
 
     function renderAccountSelect() {
       const select = $('accountSelect');
-      select.innerHTML = (state.config.accounts || []).map((account) =>
-        `<option value="${account.id}">${accountLabel(account.name)}${account.hasApiKey ? ' ✓' : ''}</option>`
-      ).join('');
+      // Account names are user input: build options as text, never as HTML.
+      select.replaceChildren(...(state.config.accounts || []).map((account) =>
+        new Option(accountLabel(account.name) + (account.hasApiKey ? ' ✓' : ''), account.id)
+      ));
       select.value = state.config.activeAccountId || '';
       $('deleteAccountBtn').disabled = (state.config.accounts || []).length <= 1;
       $('deleteAccountBtn').title = (state.config.accounts || []).length <= 1 ? t('settings.accounts.keepOne') : t('settings.accounts.deleteTitle');
