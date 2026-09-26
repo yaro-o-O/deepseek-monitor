@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Money amounts are now labelled with the currency the DeepSeek API reports (e.g. `$` for USD accounts) instead of always showing `¥`
+- Launching the app again (Finder, Spotlight, Launchpad, Start menu) now brings back the window hidden to the tray instead of doing nothing or starting a second instance
+- The macOS menu bar icon is now a monochrome template image, so it matches the other menu bar icons in light and dark mode instead of showing the blue app icon
 
 ### Security
 
