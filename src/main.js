@@ -513,6 +513,11 @@ function createWindow() {
     minHeight: 580,
     frame: false,
     transparent: true,
+    // The window is shaped entirely by the CSS `.app` panel (22px radius,
+    // inset 8px). Letting the OS draw its own shadow/rounded frame would add a
+    // dark outline whose contour does not match the panel.
+    hasShadow: false,
+    roundedCorners: false,
     resizable: true,
     skipTaskbar: true,
     icon: getAppIconPath(),
