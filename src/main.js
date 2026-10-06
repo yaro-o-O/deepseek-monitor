@@ -5,7 +5,7 @@ const fs = require('fs');
 const https = require('https');
 const http = require('http');
 const crypto = require('crypto');
-const { parseUsageExportBuffer } = require('./usage-export');
+const { parseUsageExportBuffer, USAGE_EXPORT_MAX_BYTES } = require('./usage-export');
 const i18n = require('./i18n');
 
 // Config storage path
@@ -1095,6 +1095,7 @@ async function fetchUsageMonth(month, year) {
 const USAGE_EXPORT_PATH = '/api/v0/usage/export';
 
 function requestBinaryUrl(targetUrl, token, options = {}) {
+  const maxBytes = Number(options.maxBytes) || 0;
   return new Promise((resolve) => {
     let target;
     try {
@@ -1120,13 +1121,28 @@ function requestBinaryUrl(targetUrl, token, options = {}) {
 
     const req = transport.request(requestOptions, (res) => {
       const chunks = [];
-      res.on('data', (chunk) => chunks.push(chunk));
-      res.on('end', () => resolve({
-        success: res.statusCode >= 200 && res.statusCode < 300,
-        status: res.statusCode,
-        contentType: String(res.headers['content-type'] || ''),
-        buffer: Buffer.concat(chunks)
-      }));
+      let total = 0;
+      let settled = false;
+      res.on('data', (chunk) => {
+        if (settled) return;
+        total += chunk.length;
+        if (maxBytes && total > maxBytes) {
+          settled = true;
+          req.destroy();
+          resolve({ success: false, tooLarge: true, status: res.statusCode, error: 'Response too large' });
+          return;
+        }
+        chunks.push(chunk);
+      });
+      res.on('end', () => {
+        if (settled) return;
+        resolve({
+          success: res.statusCode >= 200 && res.statusCode < 300,
+          status: res.statusCode,
+          contentType: String(res.headers['content-type'] || ''),
+          buffer: Buffer.concat(chunks)
+        });
+      });
     });
 
     req.on('error', (e) => resolve({ success: false, error: e.message }));
@@ -1157,8 +1173,9 @@ async function fetchKeyUsage(month, year, force) {
   if (!token) return { success: false, notConfigured: true, error: t('keys.tokenNotConfigured') };
 
   const url = `https://platform.deepseek.com${USAGE_EXPORT_PATH}?month=${month}&year=${year}`;
-  const result = await requestBinaryUrl(url, token);
+  const result = await requestBinaryUrl(url, token, { maxBytes: USAGE_EXPORT_MAX_BYTES });
   if (!result.success) {
+    if (result.tooLarge) return { success: false, tooLarge: true, error: t('keys.fileTooLarge') };
     return { success: false, status: result.status, error: usageErrorFromResult(result) };
   }
 

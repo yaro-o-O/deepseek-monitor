@@ -21,6 +21,10 @@
 
 const { unzipSync } = require('fflate');
 
+// The export is a ZIP; refuse anything implausibly large before buffering it
+// fully in memory or feeding it to the unzipper (zip-bomb / memory guard).
+const USAGE_EXPORT_MAX_BYTES = 64 * 1024 * 1024;
+
 function decodeUtf8(bytes) {
   try {
     return new TextDecoder('utf-8').decode(bytes);
@@ -513,6 +517,9 @@ function buildKeyUsage(amountText, unnamedLabel, costInfo) {
 // Returns { success: true, data } or { success: false, errorKey, error? }.
 // errorKey is an i18n key for the caller to translate.
 function parseUsageExportBuffer(buffer, options = {}) {
+  if (!buffer || buffer.byteLength > USAGE_EXPORT_MAX_BYTES) {
+    return { success: false, errorKey: 'keys.fileTooLarge' };
+  }
   const extracted = extractExportCsv(buffer);
   if (extracted.error) return { success: false, errorKey: 'keys.unzipFailed' };
   if (!extracted.amountText) return { success: false, errorKey: 'keys.amountMissing' };
@@ -529,5 +536,6 @@ module.exports = {
   extractExportCsv,
   buildCostInfo,
   buildKeyUsage,
-  parseUsageExportBuffer
+  parseUsageExportBuffer,
+  USAGE_EXPORT_MAX_BYTES
 };
