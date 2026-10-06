@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Per-key usage view** — the Account balance card has an API key picker; Today, This month and the V4 Flash / V4 Pro rows (tokens, cache hit, spend, and the 7-day chart) then show that key's stats, while the balance stays account-level
+- **Per-key usage view** — the Account balance card has an API key picker; Today, This month and the V4 Flash / V4 Pro rows (tokens, cache hit, spend, and the 7-day chart) then show that key's stats, while the balance stays account-level. The picker also offers **All keys**, which combines every key (this is the default view)
 - **Per-API-key usage breakdown** — a "By API key" card on the dashboard splits the selected month's requests, tokens, cache hit rate and spend across every API key of the account. Data comes from the official DeepSeek usage export (the live usage API has no per-key breakdown): it is fetched automatically with the usage token, cached per month, or imported manually as an exported ZIP/CSV
 - **English localization** — the UI, tray menu, notifications and error messages are now available in English as well as Simplified Chinese
 - **Language selector** — pick the interface language from a dropdown at the top of Settings; Simplified Chinese stays the default and the choice is saved in the config

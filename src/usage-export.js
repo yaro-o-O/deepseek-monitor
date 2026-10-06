@@ -548,9 +548,102 @@ function buildKeyUsage(amountText, unnamedLabel, costInfo) {
     cost: totalsIsMoneyMap ? roundMoney(totalsCost) : Number(totalsCostNumber.toFixed(4))
   };
 
+  // Aggregate across every key for the "All keys" view: a key-shaped entry the
+  // renderer can feed through the same code paths as a single key.
+  const isMoneyMap = typeof list[0].cost === 'object';
+  const aggDailyCost = {};
+  const aggDays = new Map();
+  const aggModels = { flash: emptyUsageModel('flash'), pro: emptyUsageModel('pro') };
+  if (isMoneyMap) {
+    aggModels.flash.cost = {};
+    aggModels.pro.cost = {};
+  }
+  let aggCacheHit = 0;
+  let aggCacheMiss = 0;
+  let aggOutput = 0;
+  for (const item of list) {
+    aggCacheHit += item.cacheHit;
+    aggCacheMiss += item.cacheMiss;
+    aggOutput += item.output;
+    for (const [date, value] of Object.entries(item.dailyCost)) {
+      if (isMoneyMap) {
+        if (!aggDailyCost[date]) aggDailyCost[date] = {};
+        for (const [curr, amount] of Object.entries(value)) addMoney(aggDailyCost[date], curr, amount);
+      } else {
+        aggDailyCost[date] = (aggDailyCost[date] || 0) + Number(value || 0);
+      }
+    }
+    for (const model of item.usage.models) {
+      const target = aggModels[model.key];
+      target.totalTokens += model.totalTokens;
+      target.requestCount += model.requestCount;
+      target.cacheHitTokens += model.cacheHitTokens;
+      target.cacheMissTokens += model.cacheMissTokens;
+      target.responseTokens += model.responseTokens;
+      if (isMoneyMap) {
+        for (const [curr, amount] of Object.entries(model.cost)) addMoney(target.cost, curr, amount);
+      } else {
+        target.cost += Number(model.cost || 0);
+      }
+    }
+    for (const day of item.usage.days) {
+      let merged = aggDays.get(day.date);
+      if (!merged) {
+        merged = emptyUsageDay(day.date);
+        if (isMoneyMap) merged.totalCost = {};
+        aggDays.set(day.date, merged);
+      }
+      merged.flashTokens += day.flashTokens;
+      merged.flashCacheHit += day.flashCacheHit;
+      merged.flashCacheMiss += day.flashCacheMiss;
+      merged.flashResponse += day.flashResponse;
+      merged.proTokens += day.proTokens;
+      merged.proCacheHit += day.proCacheHit;
+      merged.proCacheMiss += day.proCacheMiss;
+      merged.proResponse += day.proResponse;
+      merged.totalTokens += day.totalTokens;
+      if (isMoneyMap) {
+        for (const [curr, amount] of Object.entries(day.totalCost)) addMoney(merged.totalCost, curr, amount);
+      } else {
+        merged.totalCost += Number(day.totalCost || 0);
+      }
+    }
+  }
+  const allKeys = {
+    name: 'All keys',
+    maskedKey: '',
+    requests: totals.requests,
+    cacheHit: aggCacheHit,
+    cacheMiss: aggCacheMiss,
+    output: Math.round(aggOutput),
+    tokens: totals.tokens,
+    cost: totals.cost,
+    costTotal: moneyNominal(totals.cost),
+    dailyCost: {},
+    hitRate: (aggCacheHit + aggCacheMiss) > 0 ? aggCacheHit / (aggCacheHit + aggCacheMiss) : null,
+    usage: {
+      models: [aggModels.flash, aggModels.pro].map((model) => ({
+        ...model,
+        totalTokens: Math.round(model.totalTokens),
+        requestCount: Math.round(model.requestCount),
+        cacheHitTokens: Math.round(model.cacheHitTokens),
+        cacheMissTokens: Math.round(model.cacheMissTokens),
+        responseTokens: Math.round(model.responseTokens),
+        cost: roundMoney(model.cost)
+      })),
+      days: Array.from(aggDays.values())
+        .map((day) => ({ ...day, totalCost: roundMoney(day.totalCost) }))
+        .sort((a, b) => (a.date < b.date ? -1 : 1)),
+      monthCost: totals.cost,
+      currency
+    }
+  };
+  for (const [date, value] of Object.entries(aggDailyCost)) allKeys.dailyCost[date] = roundMoney(value);
+
   return {
     keys: list,
     totals,
+    allKeys,
     currency,
     dateRange: dateMin && dateMax ? { from: dateMin, to: dateMax } : null
   };

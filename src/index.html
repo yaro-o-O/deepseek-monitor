@@ -700,6 +700,9 @@
       selectedKey: ''
     };
 
+    // Sentinel for the balance-card picker's aggregate entry (all keys combined).
+    const ALL_KEYS = '__all__';
+
     const t = (key, params) => I18N.translate(state.config.language, key, params);
 
     function applyI18n() {
@@ -716,6 +719,7 @@
       renderLastUpdate();
       renderUpdateStatus();
       renderKeyMonthOptions();
+      renderBalanceKeyFilter();
     }
 
     function renderLastUpdate() {
@@ -1086,6 +1090,7 @@
     // per-key cost). The balance amount itself is always account-level.
     function selectedKeyData() {
       if (!state.selectedKey) return null;
+      if (state.selectedKey === ALL_KEYS) return state.balanceKeys?.allKeys || null;
       return (state.balanceKeys?.keys || []).find((item) => item.name === state.selectedKey) || null;
     }
 
@@ -1122,9 +1127,14 @@
         return;
       }
       row.style.display = '';
-      // Key names are data: build options as text, never as HTML.
-      select.replaceChildren(...keys.map((item) => new Option(item.name, item.name)));
-      if (!selectedKeyData()) state.selectedKey = keys[0].name;
+      // Key names are data: build options as text, never as HTML. The aggregate
+      // entry ("All keys") is first and is the default selection.
+      const options = [new Option(t('keys.allKeys'), ALL_KEYS)];
+      for (const item of keys) options.push(new Option(item.name, item.name));
+      select.replaceChildren(...options);
+      if (state.selectedKey !== ALL_KEYS && !keys.some((item) => item.name === state.selectedKey)) {
+        state.selectedKey = ALL_KEYS;
+      }
       select.value = state.selectedKey;
     }
 
@@ -1135,7 +1145,6 @@
         const result = await window.dsAPI.fetchKeyUsage({ month: now.getMonth() + 1, year: now.getFullYear() });
         if (result && result.success) state.balanceKeys = result.data;
       }
-      if (!selectedKeyData()) state.selectedKey = '';
       renderBalanceKeyFilter();
       renderUsageSections();
     }

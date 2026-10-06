@@ -51,6 +51,7 @@
       'detail.requests': 'API 请求次数',
 
       'keys.title': '🔑 按 API Key 统计',
+      'keys.allKeys': '全部 Key',
       'keys.refresh': '刷新',
       'keys.import': '导入导出文件（ZIP/CSV）',
       'keys.importing': '正在解析文件...',
@@ -230,6 +231,7 @@
       'detail.requests': 'API requests',
 
       'keys.title': '🔑 By API key',
+      'keys.allKeys': 'All keys',
       'keys.refresh': 'Refresh',
       'keys.import': 'Import export file (ZIP/CSV)',
       'keys.importing': 'Parsing file...',
