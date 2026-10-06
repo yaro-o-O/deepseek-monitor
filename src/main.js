@@ -1096,6 +1096,7 @@ const USAGE_EXPORT_PATH = '/api/v0/usage/export';
 
 function requestBinaryUrl(targetUrl, token, options = {}) {
   const maxBytes = Number(options.maxBytes) || 0;
+  const maxRedirects = Number.isFinite(options.maxRedirects) ? options.maxRedirects : 5;
   return new Promise((resolve) => {
     let target;
     try {
@@ -1104,22 +1105,44 @@ function requestBinaryUrl(targetUrl, token, options = {}) {
       resolve({ success: false, error: e.message });
       return;
     }
+    const origin = options.origin || target.origin;
     const transport = target.protocol === 'http:' ? http : https;
-    const requestOptions = {
+    const headers = {
+      'Accept': '*/*',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36',
+      'x-app-version': '1.0.0',
+      ...(options.headers || {})
+    };
+    // Send the bearer token only to the origin we started from: a redirect to
+    // object storage (a different host) must never receive it.
+    if (target.origin === origin) headers.Authorization = `Bearer ${token}`;
+
+    const req = transport.request({
       hostname: target.hostname,
       port: target.port || (target.protocol === 'http:' ? 80 : 443),
       path: `${target.pathname}${target.search}`,
       method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Accept': '*/*',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36',
-        'x-app-version': '1.0.0',
-        ...(options.headers || {})
+      headers
+    }, (res) => {
+      const status = res.statusCode;
+      const location = res.headers.location;
+      if (status >= 300 && status < 400 && location) {
+        res.resume();
+        if (maxRedirects <= 0) {
+          resolve({ success: false, status, error: 'Too many redirects' });
+          return;
+        }
+        let next;
+        try {
+          next = new URL(location, target);
+        } catch (e) {
+          resolve({ success: false, status, error: 'Bad redirect location' });
+          return;
+        }
+        resolve(requestBinaryUrl(next.toString(), token, { ...options, origin, maxRedirects: maxRedirects - 1 }));
+        return;
       }
-    };
 
-    const req = transport.request(requestOptions, (res) => {
       const chunks = [];
       let total = 0;
       let settled = false;
@@ -1129,7 +1152,7 @@ function requestBinaryUrl(targetUrl, token, options = {}) {
         if (maxBytes && total > maxBytes) {
           settled = true;
           req.destroy();
-          resolve({ success: false, tooLarge: true, status: res.statusCode, error: 'Response too large' });
+          resolve({ success: false, tooLarge: true, status, error: 'Response too large' });
           return;
         }
         chunks.push(chunk);
@@ -1137,8 +1160,8 @@ function requestBinaryUrl(targetUrl, token, options = {}) {
       res.on('end', () => {
         if (settled) return;
         resolve({
-          success: res.statusCode >= 200 && res.statusCode < 300,
-          status: res.statusCode,
+          success: status >= 200 && status < 300,
+          status,
           contentType: String(res.headers['content-type'] || ''),
           buffer: Buffer.concat(chunks)
         });
