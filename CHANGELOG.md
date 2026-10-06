@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Per-key, per-model and per-day costs keep each currency separate instead of summing them into one figure — accounts billed in several currencies (e.g. `$0.65 USD + ¥6.04 CNY`) now match the platform again; per-key money is allocated from the official `cost.csv` so the parts add up to the total
 - A day or model charged in a single currency no longer loses that currency: previously a USD-only day could be relabelled with the account's primary currency (e.g. `¥0.19` for a `$0.19` amount), so Today could show the wrong symbol while This month looked fine
+- The panel no longer shows a translucent grey rectangular band around it: the panel's large CSS shadow was hard-clipped by the window edge (the OS shadow is disabled on the transparent window), so the outer shadow is removed
 - The frameless transparent window no longer shows a dark native outline that ignored the app's rounded contour (the OS shadow and native corner rounding are disabled, so the CSS panel defines the shape)
 - Money amounts are now labelled with the currency the DeepSeek API reports (e.g. `$` for USD accounts) instead of always showing `¥`
 - Launching the app again (Finder, Spotlight, Launchpad, Start menu) now brings back the window hidden to the tray instead of doing nothing or starting a second instance
