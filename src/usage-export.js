@@ -143,8 +143,29 @@ function moneyNominal(value) {
   return Object.values(value).reduce((sum, amount) => sum + Math.abs(Number(amount) || 0), 0);
 }
 
+function pad2(value) {
+  return String(value).padStart(2, '0');
+}
+
+// The export timestamps are UTC (`utc_date` is date-only; `start_time_iso`
+// carries a timezone). The dashboard compares against the machine's local date,
+// so a full timestamp is converted to its local calendar day; a date-only value
+// is kept as-is because there is no time to shift it by.
 function dayOfColumn(row, iDate) {
-  return iDate >= 0 ? String(row[iDate] || '').slice(0, 10) : '';
+  if (iDate < 0) return '';
+  const raw = String(row[iDate] || '').trim();
+  if (!raw) return '';
+  if (raw.length > 10 && (raw[10] === 'T' || raw[10] === ' ')) {
+    const hasZone = /(?:Z|[+-]\d{2}:?\d{2})$/.test(raw);
+    if (hasZone) {
+      const ms = Date.parse(raw);
+      if (Number.isFinite(ms)) {
+        const d = new Date(ms);
+        return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+      }
+    }
+  }
+  return raw.slice(0, 10);
 }
 
 // Official money per "day|model" and per model, each as a currency map.
