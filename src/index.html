@@ -1279,7 +1279,15 @@
       if (state.refreshTimer) window.clearInterval(state.refreshTimer);
       if (state.config.autoRefreshEnabled === false) return;
       const seconds = Number(state.config.refreshIntervalSeconds || 300);
-      state.refreshTimer = window.setInterval(refreshAll, seconds * 1000);
+      state.refreshTimer = window.setInterval(() => refreshDashboard(), seconds * 1000);
+    }
+
+    // Refresh everything the dashboard shows: balance and live usage (which can
+    // change every interval) plus the per-key export views. The export is cached
+    // with a TTL in the main process, so this does not re-download it every time.
+    function refreshDashboard() {
+      refreshAll();
+      refreshKeysViews(false);
     }
 
     async function loadConfig() {
@@ -1311,7 +1319,7 @@
     }
 
     function bindEvents() {
-      $('refreshBtn').addEventListener('click', refreshAll);
+      $('refreshBtn').addEventListener('click', refreshDashboard);
       $('settingsBtn').addEventListener('click', () => showView('settings'));
       $('backBtn').addEventListener('click', () => showView('dashboard'));
       $('minBtn').addEventListener('click', () => window.dsAPI.windowMinimize());

@@ -1139,13 +1139,20 @@ function requestBinaryUrl(targetUrl, token, options = {}) {
 }
 
 const keyUsageCache = new Map();
+// The export is heavy and can be rate-limited, so cached months are reused for
+// a while; a plain refresh (dashboard refresh / auto-refresh) only re-downloads
+// once this window has elapsed, while an explicit force always re-downloads.
+const KEY_USAGE_CACHE_TTL_MS = 5 * 60 * 1000;
 
 async function fetchKeyUsage(month, year, force) {
   const account = getActiveAccount();
   const token = account && account.usageToken;
   const cacheKey = account ? `${account.id}:${year}:${month}` : '';
   if (!force && cacheKey && keyUsageCache.has(cacheKey)) {
-    return { success: true, cached: true, data: keyUsageCache.get(cacheKey) };
+    const cached = keyUsageCache.get(cacheKey);
+    if (Date.now() - Number(cached.fetchedAt || 0) < KEY_USAGE_CACHE_TTL_MS) {
+      return { success: true, cached: true, data: cached };
+    }
   }
   if (!token) return { success: false, notConfigured: true, error: t('keys.tokenNotConfigured') };
 
