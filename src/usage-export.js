@@ -33,26 +33,41 @@ function decodeUtf8(bytes) {
   }
 }
 
-// Minimal RFC 4180 CSV reader: quoted fields, embedded commas and doubled
-// quotes. Returns an array of rows (each an array of string cells).
+// Minimal RFC 4180 CSV reader: quoted fields, embedded commas, doubled quotes
+// and embedded newlines. Returns an array of rows (each an array of string
+// cells). Scans with indexOf/slice instead of per-character concatenation so
+// large exports stay fast.
 function parseCsv(text) {
   const rows = [];
+  const src = String(text || '');
+  const len = src.length;
   let row = [];
   let field = '';
-  let inQuotes = false;
-  for (let i = 0; i < text.length; i += 1) {
-    const ch = text[i];
-    if (inQuotes) {
-      if (ch === '"') {
-        if (text[i + 1] === '"') { field += '"'; i += 1; }
-        else inQuotes = false;
-      } else field += ch;
+  let i = 0;
+  while (i < len) {
+    const ch = src[i];
+    if (ch === '"') {
+      i += 1;
+      while (i < len) {
+        const quote = src.indexOf('"', i);
+        if (quote < 0) { field += src.slice(i); i = len; break; }
+        field += src.slice(i, quote);
+        if (src[quote + 1] === '"') { field += '"'; i = quote + 2; }
+        else { i = quote + 1; break; }
+      }
       continue;
     }
-    if (ch === '"') inQuotes = true;
-    else if (ch === ',') { row.push(field); field = ''; }
-    else if (ch === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
-    else if (ch !== '\r') field += ch;
+    if (ch === ',') { row.push(field); field = ''; i += 1; continue; }
+    if (ch === '\n') { row.push(field); rows.push(row); row = []; field = ''; i += 1; continue; }
+    if (ch === '\r') { i += 1; continue; }
+    let end = i;
+    while (end < len) {
+      const c = src[end];
+      if (c === ',' || c === '\n' || c === '\r' || c === '"') break;
+      end += 1;
+    }
+    field += src.slice(i, end);
+    i = end;
   }
   if (field.length > 0 || row.length > 0) { row.push(field); rows.push(row); }
   return rows;
