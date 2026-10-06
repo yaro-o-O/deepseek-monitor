@@ -9,11 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Per-key usage view** — the Account balance card has an API key picker; Today, This month and the V4 Flash / V4 Pro rows (tokens, cache hit, spend, and the 7-day chart) then show that key's stats, while the balance stays account-level
+- **Per-API-key usage breakdown** — a "By API key" card on the dashboard splits the selected month's requests, tokens, cache hit rate and spend across every API key of the account. Data comes from the official DeepSeek usage export (the live usage API has no per-key breakdown): it is fetched automatically with the usage token, cached per month, or imported manually as an exported ZIP/CSV
 - **English localization** — the UI, tray menu, notifications and error messages are now available in English as well as Simplified Chinese
 - **Language selector** — pick the interface language from a dropdown at the top of Settings; Simplified Chinese stays the default and the choice is saved in the config
 
 ### Fixed
 
+- Per-key, per-model and per-day costs keep each currency separate instead of summing them into one figure — accounts billed in several currencies (e.g. `$0.65 USD + ¥6.04 CNY`) now match the platform again; per-key money is allocated from the official `cost.csv` so the parts add up to the total
+- A day or model charged in a single currency no longer loses that currency: previously a USD-only day could be relabelled with the account's primary currency (e.g. `¥0.19` for a `$0.19` amount), so Today could show the wrong symbol while This month looked fine
 - The frameless transparent window no longer shows a dark native outline that ignored the app's rounded contour (the OS shadow and native corner rounding are disabled, so the CSS panel defines the shape)
 - Money amounts are now labelled with the currency the DeepSeek API reports (e.g. `$` for USD accounts) instead of always showing `¥`
 - Launching the app again (Finder, Spotlight, Launchpad, Start menu) now brings back the window hidden to the tray instead of doing nothing or starting a second instance
@@ -23,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Auto-updates are now published from and fetched from `yaro-o-O/deepseek-monitor`
 - The usage-token sign-in window only inspects requests to `https://platform.deepseek.com`, so bearer tokens of other sites are never captured or sent for verification; the request hook is removed when the window closes
+- The per-key usage export can contain the API key value in clear text; the app only ever keeps a masked form (`sk-abc…0def`) in memory and never logs or displays the full key
 - Server error messages and account names are rendered as text instead of HTML
 - Updated `js-yaml` to 4.3.2 (GHSA-2883-xcg3-v3hh)
 - Updated `electron-builder` from 24.13.3 to 26.15.3, clearing the remaining build-tool advisories (including `tar` path traversal and `builder-util-runtime` credential leak on redirects)

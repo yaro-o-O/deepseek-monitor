@@ -171,6 +171,8 @@
     .status.off { color: #ffaf6f; background: rgba(150, 70, 40, 0.42); }
 
     .balance-card { padding: 13px 14px; }
+    .balance-key { margin: 8px 0 2px; }
+    .balance-key select { height: 28px; font-size: 11px; font-weight: 800; }
     .balance-amount {
       margin-top: 14px;
       color: var(--brand-soft);
@@ -408,6 +410,17 @@
       padding: 14px;
     }
     .last-update { color: var(--faint); text-align: center; font-size: 10px; font-weight: 800; }
+    .keys-toolbar { display: flex; gap: 8px; align-items: center; margin: 8px 0 4px; }
+    .keys-toolbar select { flex: 1; min-width: 0; }
+    .keys-toolbar button { flex: 0 0 auto; }
+    .keys-list { display: flex; flex-direction: column; gap: 6px; }
+    .key-row { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; background: rgba(var(--fg), 0.05); border: 1px solid rgba(255,255,255,0.07); }
+    .key-badge { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; font-size: 11px; font-weight: 900; background: rgba(77,107,254,0.22); color: #cbd7ff; flex: 0 0 auto; }
+    .key-main { min-width: 0; flex: 1; }
+    .key-name { font-size: 12px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .key-sub { font-size: 10px; color: var(--muted); font-weight: 700; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .key-cost { font-size: 12px; font-weight: 900; text-align: right; white-space: nowrap; }
+    .key-cost span { display: block; font-size: 10px; color: var(--faint); font-weight: 700; }
   </style>
 </head>
 <body>
@@ -426,7 +439,7 @@
       </div>
     </header>
 
-    <section class="view active" id="dashboardView">
+    <section class="view scroll-view active" id="dashboardView">
       <article class="card balance-card">
         <div class="row-title">
           <div class="caption" data-i18n="balance.caption">▣ 账户余额</div>
@@ -434,6 +447,9 @@
         </div>
         <div class="balance-amount dim" id="balanceAmount" data-i18n="balance.queryingLong">查询中...</div>
         <div class="balance-error" id="balanceError" style="display:none;"></div>
+        <div class="balance-key" id="balanceKeyRow" style="display:none;">
+          <select id="balanceKeySelect" data-i18n-title="balance.keySelect"></select>
+        </div>
         <div class="metric-grid">
           <div class="mini-card">
             <div class="caption" data-i18n="cost.today">☀ 当日消耗</div>
@@ -485,6 +501,22 @@
           <span><i class="dot miss"></i><span data-i18n="chart.miss">未命中</span></span>
           <span><i class="dot out"></i><span data-i18n="chart.out">输出</span></span>
         </div>
+      </article>
+      <article class="card keys-card">
+        <div class="row-title">
+          <div class="caption" data-i18n="keys.title">🔑 按 API Key 统计</div>
+          <div class="chart-meta" id="keysMeta">—</div>
+        </div>
+        <div class="keys-toolbar">
+          <select id="keysMonth"></select>
+          <button class="secondary" id="keysRefreshBtn" data-i18n-title="keys.refresh">↻</button>
+        </div>
+        <div class="keys-list" id="keysList"></div>
+        <div class="settings-actions">
+          <button class="link" id="keysImportBtn" data-i18n="keys.import">导入导出文件（ZIP/CSV）</button>
+        </div>
+        <input type="file" id="keysImportInput" accept=".zip,.csv" style="display:none;">
+        <p class="faint" id="keysMessage"></p>
       </article>
       <div class="last-update" id="lastUpdate">—</div>
     </section>
@@ -661,7 +693,11 @@
       loading: false,
       lastUpdate: null,
       updatePayload: null,
-      balanceCurrency: null
+      balanceCurrency: null,
+      keyUsage: null,
+      keyMonth: null,
+      balanceKeys: null,
+      selectedKey: ''
     };
 
     const t = (key, params) => I18N.translate(state.config.language, key, params);
@@ -679,6 +715,7 @@
       select.value = I18N.normalizeLanguage(state.config.language);
       renderLastUpdate();
       renderUpdateStatus();
+      renderKeyMonthOptions();
     }
 
     function renderLastUpdate() {
@@ -707,8 +744,32 @@
 
     const fmtInt = (n) => Math.round(Number(n || 0)).toLocaleString('en-US');
     // Usage costs are labelled with the usage API's currency, falling back to the balance currency.
-    const costCurrency = () => state.usage?.currency || state.balanceCurrency || 'CNY';
+    const costCurrency = () => currentUsage()?.currency || state.balanceCurrency || 'CNY';
     const fmtMoney = (n, currency = costCurrency()) => I18N.formatMoney(n, currency);
+    // Costs can be per-currency maps ({ CNY: 6.04, USD: 0.65 }) when the account
+    // is charged in several currencies; numbers are single-currency values.
+    function moneyPrimary(value, fallbackCurrency) {
+      if (value && typeof value === 'object') {
+        let best = null;
+        for (const [currency, amount] of Object.entries(value)) {
+          const n = Number(amount) || 0;
+          if (!best || Math.abs(n) > Math.abs(best.amount)) best = { currency, amount: n };
+        }
+        return best || { currency: fallbackCurrency || 'CNY', amount: 0 };
+      }
+      return { currency: fallbackCurrency || 'CNY', amount: Number(value) || 0 };
+    }
+    function fmtMoneyValue(value, fallbackCurrency) {
+      if (value && typeof value === 'object') {
+        const entries = Object.entries(value)
+          .map(([currency, amount]) => [currency, Number(amount) || 0])
+          .filter(([, amount]) => Math.abs(amount) >= 0.00005)
+          .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
+        if (!entries.length) return fmtMoney(0, fallbackCurrency || costCurrency());
+        return entries.map(([currency, amount]) => fmtMoney(amount, currency)).join(' + ');
+      }
+      return fmtMoney(value, fallbackCurrency || costCurrency());
+    }
     const fmtTokensShort = (n) => {
       n = Number(n || 0);
       if (n >= 1e8) return (n / 1e6).toFixed(0) + 'M';
@@ -723,14 +784,21 @@
       return parts.length === 3 ? `${Number(parts[1])}/${Number(parts[2])}` : date;
     };
 
+    // When an API key is selected in the balance card, all usage figures come
+    // from that key's export slice; otherwise they come from the live account API.
+    function currentUsage() {
+      const keyData = selectedKeyData();
+      return (keyData && keyData.usage) ? keyData.usage : state.usage;
+    }
+
     function modelName(key) { return key === 'flash' ? 'V4 Flash' : 'V4 Pro'; }
-    function modelByKey(key) { return state.usage?.models?.find((item) => item.key === key) || null; }
+    function modelByKey(key) { return currentUsage()?.models?.find((item) => item.key === key) || null; }
     function hitRate(model) {
       const base = Number(model?.cacheHitTokens || 0) + Number(model?.cacheMissTokens || 0);
       return base > 0 ? Math.round(Number(model.cacheHitTokens || 0) / base * 100) + '%' : '—';
     }
     function recentDays() {
-      const source = new Map((state.usage?.days || []).filter((day) => day.date <= todayStr()).map((day) => [day.date, day]));
+      const source = new Map((currentUsage()?.days || []).filter((day) => day.date <= todayStr()).map((day) => [day.date, day]));
       const now = new Date();
       return Array.from({ length: 7 }, (_, index) => {
         const d = new Date(now);
@@ -793,9 +861,7 @@
       const maxTokens = Math.max(flash?.totalTokens || 0, pro?.totalTokens || 0, 1);
       renderUsageRow('flash', flash, maxTokens);
       renderUsageRow('pro', pro, maxTokens);
-      const today = state.usage?.days?.find((day) => day.date === todayStr());
-      $('todayCost').textContent = today ? fmtMoney(today.totalCost) : '—';
-      $('monthCost').textContent = state.usage ? fmtMoney(state.usage.monthCost || 0) : '—';
+      renderSummaryCosts();
     }
 
     function setLegendMode(mode) {
@@ -808,8 +874,9 @@
 
     function renderUsageRow(key, data, maxTokens) {
       $(key + 'Tokens').textContent = data ? fmtInt(data.totalTokens) + ' Tokens' : '—';
-      $(key + 'Cost').textContent = data ? fmtMoney(data.cost) : '—';
-      $(key + 'Ratio').textContent = data && data.cost > 0 ? fmtTokensShort(data.totalTokens / data.cost) + ' T/' + I18N.currencySymbol(costCurrency()).trim() : '—';
+      $(key + 'Cost').textContent = data ? fmtMoneyValue(data.cost) : '—';
+      const primary = data ? moneyPrimary(data.cost, costCurrency()) : null;
+      $(key + 'Ratio').textContent = primary && primary.amount > 0 ? fmtTokensShort(data.totalTokens / primary.amount) + ' T/' + I18N.currencySymbol(primary.currency).trim() : '—';
       $(key + 'HitRate').textContent = t('usage.cacheHit', { rate: data ? hitRate(data) : '—' });
       $(key + 'Progress').style.width = data ? Math.max(2, data.totalTokens / maxTokens * 100) + '%' : '0%';
     }
@@ -866,7 +933,7 @@
       const isFlash = key === 'flash';
       const data = modelByKey(key);
       $('detailTitle').textContent = modelName(key);
-      $('detailCost').textContent = data ? fmtMoney(data.cost) : '—';
+      $('detailCost').textContent = data ? fmtMoneyValue(data.cost) : '—';
       $('detailRequests').textContent = data ? fmtInt(data.requestCount) : '—';
       $('detailTokens').textContent = data ? fmtTokensShort(data.totalTokens) : '—';
       $('detailBadge').textContent = isFlash ? 'F' : 'P';
@@ -891,6 +958,12 @@
 
     function renderUsageError(message) {
       state.usage = null;
+      // A selected key's export data is independent of the live usage API, so
+      // keep showing it when the live request fails.
+      if (selectedKeyData()?.usage) {
+        renderUsageSections();
+        return;
+      }
       $('todayCost').textContent = '—';
       $('monthCost').textContent = '—';
       renderUsageRows();
@@ -901,6 +974,192 @@
         renderDetail();
         $('detailRange').textContent = message;
         $('detailBars').replaceChildren(placeholderEl(message));
+      }
+    }
+
+    // ---- Per-API-key usage ----
+    function ensureKeyMonth() {
+      if (!state.keyMonth) {
+        const now = new Date();
+        state.keyMonth = { month: now.getMonth() + 1, year: now.getFullYear() };
+      }
+      return state.keyMonth;
+    }
+
+    function renderKeyMonthOptions() {
+      const select = $('keysMonth');
+      const now = new Date();
+      const options = [];
+      for (let i = 0; i < 12; i += 1) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        options.push(new Option(
+          d.toLocaleDateString(I18N.localeOf(state.config.language), { year: 'numeric', month: 'long' }),
+          `${d.getFullYear()}-${d.getMonth() + 1}`
+        ));
+      }
+      select.replaceChildren(...options);
+      const current = ensureKeyMonth();
+      select.value = `${current.year}-${current.month}`;
+    }
+
+    function keyInitials(name) {
+      const value = String(name || '').trim();
+      return value ? value.slice(0, 1).toUpperCase() : '•';
+    }
+
+    function renderKeyUsage() {
+      const data = state.keyUsage;
+      if (!data || !data.keys?.length) {
+        $('keysList').replaceChildren(placeholderEl(t('keys.empty')));
+        $('keysMeta').textContent = '—';
+        return;
+      }
+      const currency = data.currency || state.balanceCurrency || 'CNY';
+      $('keysMeta').textContent = t('keys.summary', {
+        keys: data.totals.keys,
+        tokens: fmtTokensShort(data.totals.tokens),
+        cost: fmtMoneyValue(data.totals.cost, currency)
+      });
+      // Key names and masked values are data: build rows as text, never as HTML.
+      $('keysList').replaceChildren(...data.keys.map((item) => {
+        const row = document.createElement('div');
+        row.className = 'key-row';
+
+        const badge = document.createElement('div');
+        badge.className = 'key-badge';
+        badge.textContent = keyInitials(item.name);
+
+        const main = document.createElement('div');
+        main.className = 'key-main';
+        const name = document.createElement('div');
+        name.className = 'key-name';
+        name.textContent = item.name;
+        const sub = document.createElement('div');
+        sub.className = 'key-sub';
+        const rate = item.hitRate === null || item.hitRate === undefined ? '—' : Math.round(item.hitRate * 100) + '%';
+        sub.textContent = `${item.maskedKey ? item.maskedKey + ' · ' : ''}${t('keys.requests', { count: fmtInt(item.requests) })} · ${t('keys.hitRate', { rate })}`;
+        main.append(name, sub);
+
+        const cost = document.createElement('div');
+        cost.className = 'key-cost';
+        cost.textContent = fmtMoneyValue(item.cost, currency);
+        const tokens = document.createElement('span');
+        tokens.textContent = fmtTokensShort(item.tokens) + ' tokens';
+        cost.append(tokens);
+
+        row.append(badge, main, cost);
+        return row;
+      }));
+    }
+
+    async function loadKeyUsage(force = false) {
+      const target = ensureKeyMonth();
+      $('keysMeta').textContent = t('keys.loading');
+      $('keysMessage').textContent = '';
+      const result = await window.dsAPI.fetchKeyUsage({ month: target.month, year: target.year, force });
+      if (!result || !result.success) {
+        state.keyUsage = null;
+        renderKeyUsage();
+        $('keysMessage').textContent = result?.notConfigured
+          ? t('keys.tokenNotConfigured')
+          : (result?.error || t('keys.queryFailed'));
+        return;
+      }
+      state.keyUsage = result.data;
+      renderKeyUsage();
+      if (!state.keyUsage?.keys?.length) $('keysMessage').textContent = t('keys.noData');
+    }
+
+    function refreshKeysForActiveAccount(force = false) {
+      if (state.config.hasUsageToken) {
+        loadKeyUsage(force);
+      } else {
+        state.keyUsage = null;
+        renderKeyUsage();
+        $('keysMessage').textContent = t('keys.tokenNotConfigured');
+      }
+    }
+
+    // ---- Balance-card stats filter (by API key) ----
+    // Today / This month can show either the whole account (live usage API) or
+    // a single API key (from the current-month export, which carries per-day
+    // per-key cost). The balance amount itself is always account-level.
+    function selectedKeyData() {
+      if (!state.selectedKey) return null;
+      return (state.balanceKeys?.keys || []).find((item) => item.name === state.selectedKey) || null;
+    }
+
+    function renderSummaryCosts() {
+      const keyData = selectedKeyData();
+      if (keyData) {
+        // Costs carry their own currency; the fallback is only for amounts whose
+        // currency is unknown (derived totals without cost.csv).
+        const currency = keyData.usage?.currency || state.balanceKeys?.currency || state.balanceCurrency || 'CNY';
+        $('todayCost').textContent = fmtMoneyValue(keyData.dailyCost?.[todayStr()] || 0, currency);
+        $('monthCost').textContent = fmtMoneyValue(keyData.cost, currency);
+        return;
+      }
+      const today = state.usage?.days?.find((day) => day.date === todayStr());
+      $('todayCost').textContent = today ? fmtMoney(today.totalCost) : '—';
+      $('monthCost').textContent = state.usage ? fmtMoney(state.usage.monthCost || 0) : '—';
+    }
+
+    // Re-renders everything that depends on the selected key: summary costs,
+    // model rows, the trend chart and the detail view.
+    function renderUsageSections() {
+      renderUsageRows();
+      renderTrend();
+      if (state.view === 'detail') renderDetail();
+    }
+
+    function renderBalanceKeyFilter() {
+      const row = $('balanceKeyRow');
+      const select = $('balanceKeySelect');
+      const keys = state.balanceKeys?.keys || [];
+      if (!keys.length) {
+        row.style.display = 'none';
+        select.replaceChildren();
+        return;
+      }
+      row.style.display = '';
+      // Key names are data: build options as text, never as HTML.
+      select.replaceChildren(...keys.map((item) => new Option(item.name, item.name)));
+      if (!selectedKeyData()) state.selectedKey = keys[0].name;
+      select.value = state.selectedKey;
+    }
+
+    async function loadBalanceKeys() {
+      state.balanceKeys = null;
+      if (state.config.hasUsageToken) {
+        const now = new Date();
+        const result = await window.dsAPI.fetchKeyUsage({ month: now.getMonth() + 1, year: now.getFullYear() });
+        if (result && result.success) state.balanceKeys = result.data;
+      }
+      if (!selectedKeyData()) state.selectedKey = '';
+      renderBalanceKeyFilter();
+      renderUsageSections();
+    }
+
+    function refreshKeysViews(force = false) {
+      refreshKeysForActiveAccount(force);
+      loadBalanceKeys();
+    }
+
+    async function importKeyUsageFile(file) {
+      if (!file) return;
+      $('keysMessage').textContent = t('keys.importing');
+      try {
+        const buffer = await file.arrayBuffer();
+        const result = await window.dsAPI.importUsageExport({ name: file.name, buffer });
+        if (!result || !result.success) {
+          $('keysMessage').textContent = t('keys.importFailed', { error: result?.error || t('keys.parseFailed') });
+          return;
+        }
+        state.keyUsage = result.data;
+        renderKeyUsage();
+        $('keysMessage').textContent = t('keys.imported', { count: result.data.keys?.length || 0 });
+      } catch (error) {
+        $('keysMessage').textContent = t('keys.importFailed', { error: String(error?.message || error) });
       }
     }
 
@@ -1000,6 +1259,22 @@
       $('deleteAccountBtn').title = (state.config.accounts || []).length <= 1 ? t('settings.accounts.keepOne') : t('settings.accounts.deleteTitle');
     }
 
+    // Switching the account here drives every account-scoped figure on the
+    // dashboard: balance, Today / This month, the model rows, the trend chart
+    // and the per-key breakdown.
+    async function switchActiveAccount(id) {
+      if (!id || id === state.config.activeAccountId) return;
+      await window.dsAPI.setActiveAccount(id);
+      state.config.activeAccountId = id;
+      state.keyUsage = null;
+      state.balanceKeys = null;
+      state.selectedKey = '';
+      renderAccountSelect();
+      await loadConfig();
+      refreshAll();
+      refreshKeysViews(false);
+    }
+
     function scheduleAutoRefresh() {
       if (state.refreshTimer) window.clearInterval(state.refreshTimer);
       if (state.config.autoRefreshEnabled === false) return;
@@ -1047,6 +1322,19 @@
           showView('detail');
         });
       });
+      $('keysMonth').addEventListener('change', (event) => {
+        const [year, month] = String(event.target.value).split('-').map(Number);
+        state.keyMonth = { year, month };
+        state.keyUsage = null;
+        loadKeyUsage(false);
+      });
+      $('keysRefreshBtn').addEventListener('click', () => loadKeyUsage(true));
+      $('keysImportBtn').addEventListener('click', () => $('keysImportInput').click());
+      $('keysImportInput').addEventListener('change', (event) => {
+        const file = event.target.files && event.target.files[0];
+        event.target.value = '';
+        importKeyUsageFile(file);
+      });
       $('saveKeyBtn').addEventListener('click', async () => {
         const key = $('apiKeyInput').value.trim();
         if (!key) return;
@@ -1080,6 +1368,13 @@
         $('tokenMessage').textContent = t('settings.token.cleared');
         await loadConfig();
         renderUsageError(t('usage.tokenNotConfigured'));
+        state.keyUsage = null;
+        renderKeyUsage();
+        $('keysMessage').textContent = t('keys.tokenNotConfigured');
+        state.balanceKeys = null;
+        state.selectedKey = '';
+        renderBalanceKeyFilter();
+        renderUsageSections();
       });
       $('toggleManualBtn').addEventListener('click', () => {
         const box = $('manualTokenBox');
@@ -1098,6 +1393,7 @@
         $('tokenMessage').textContent = t('settings.token.saved');
         await loadConfig();
         refreshAll();
+        refreshKeysViews(true);
       });
       $('autoLaunchToggle').addEventListener('change', async (event) => {
         await window.dsAPI.setAutoLaunch(event.target.checked);
@@ -1135,6 +1431,7 @@
         $('tokenMessage').textContent = t('settings.token.captured');
         await loadConfig();
         refreshAll();
+        refreshKeysViews(true);
       });
       window.dsAPI.onUsageSyncEnded(() => {
         $('tokenMessage').textContent = t('settings.token.syncEnded');
@@ -1150,12 +1447,10 @@
       });
 
       // Account management
-      $('accountSelect').addEventListener('change', async (event) => {
-        await window.dsAPI.setActiveAccount(event.target.value);
-        state.config.activeAccountId = event.target.value;
-        renderAccountSelect();
-        await loadConfig();
-        refreshAll();
+      $('accountSelect').addEventListener('change', (event) => switchActiveAccount(event.target.value));
+      $('balanceKeySelect').addEventListener('change', (event) => {
+        state.selectedKey = event.target.value || '';
+        renderUsageSections();
       });
       $('addAccountBtn').addEventListener('click', async () => {
         const name = $('newAccountName').value.trim();
@@ -1164,8 +1459,12 @@
         if (!result.success) { $('accountMessage').textContent = result.error || t('settings.accounts.addFailed'); return; }
         $('newAccountName').value = '';
         $('accountMessage').textContent = t('settings.accounts.added');
+        state.keyUsage = null;
+        state.balanceKeys = null;
+        state.selectedKey = '';
         await loadConfig();
         refreshAll();
+        refreshKeysViews(false);
       });
       $('deleteAccountBtn').addEventListener('click', async () => {
         const id = state.config.activeAccountId;
@@ -1174,8 +1473,12 @@
         const result = await window.dsAPI.deleteAccount(id);
         if (!result.success) { $('accountMessage').textContent = result.error || t('settings.accounts.deleteFailed'); return; }
         $('accountMessage').textContent = t('settings.accounts.deleted');
+        state.keyUsage = null;
+        state.balanceKeys = null;
+        state.selectedKey = '';
         await loadConfig();
         refreshAll();
+        refreshKeysViews(false);
       });
 
       // Budget alert
@@ -1227,6 +1530,7 @@
       applyI18n();
       renderUsageError(state.config.hasUsageToken ? t('usage.querying') : t('usage.tokenNotConfigured'));
       await refreshAll();
+      refreshKeysViews(false);
     }
 
     init();

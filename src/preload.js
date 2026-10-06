@@ -15,6 +15,8 @@ contextBridge.exposeInMainWorld('dsAPI', {
   fetchBalance: () => ipcRenderer.invoke('fetch-balance'),
   fetchModels: () => ipcRenderer.invoke('fetch-models'),
   fetchUsage: (params) => ipcRenderer.invoke('fetch-usage', params),
+  fetchKeyUsage: (params) => ipcRenderer.invoke('fetch-key-usage', params),
+  importUsageExport: (payload) => ipcRenderer.invoke('import-usage-export', payload),
   openBrowserLogin: () => ipcRenderer.invoke('open-browser-login'),
   startUsageSync: () => ipcRenderer.invoke('start-usage-sync'),
   addAccount: (name) => ipcRenderer.invoke('add-account', name),

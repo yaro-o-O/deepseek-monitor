@@ -5,6 +5,7 @@ const fs = require('fs');
 const https = require('https');
 const http = require('http');
 const crypto = require('crypto');
+const { parseUsageExportBuffer } = require('./usage-export');
 const i18n = require('./i18n');
 
 // Config storage path
@@ -1085,6 +1086,100 @@ async function fetchUsageMonth(month, year) {
   return { success: true, data: normalizeUsage(amount.data, cost.data) };
 }
 
+// ============ Per-API-key usage (official export) ============
+// Parsing/aggregation lives in ./usage-export.js (pure, unit-tested); this
+// section only handles the HTTP fetch, caching and IPC. The export is heavy
+// and can be rate-limited, so a month's result is cached per account and only
+// re-downloaded when the user asks for a refresh.
+
+const USAGE_EXPORT_PATH = '/api/v0/usage/export';
+
+function requestBinaryUrl(targetUrl, token, options = {}) {
+  return new Promise((resolve) => {
+    let target;
+    try {
+      target = new URL(targetUrl);
+    } catch (e) {
+      resolve({ success: false, error: e.message });
+      return;
+    }
+    const transport = target.protocol === 'http:' ? http : https;
+    const requestOptions = {
+      hostname: target.hostname,
+      port: target.port || (target.protocol === 'http:' ? 80 : 443),
+      path: `${target.pathname}${target.search}`,
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': '*/*',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36',
+        'x-app-version': '1.0.0',
+        ...(options.headers || {})
+      }
+    };
+
+    const req = transport.request(requestOptions, (res) => {
+      const chunks = [];
+      res.on('data', (chunk) => chunks.push(chunk));
+      res.on('end', () => resolve({
+        success: res.statusCode >= 200 && res.statusCode < 300,
+        status: res.statusCode,
+        contentType: String(res.headers['content-type'] || ''),
+        buffer: Buffer.concat(chunks)
+      }));
+    });
+
+    req.on('error', (e) => resolve({ success: false, error: e.message }));
+    req.setTimeout(options.timeout || 30000, () => {
+      req.destroy();
+      resolve({ success: false, error: 'Timeout' });
+    });
+    req.end();
+  });
+}
+
+const keyUsageCache = new Map();
+
+async function fetchKeyUsage(month, year, force) {
+  const account = getActiveAccount();
+  const token = account && account.usageToken;
+  const cacheKey = account ? `${account.id}:${year}:${month}` : '';
+  if (!force && cacheKey && keyUsageCache.has(cacheKey)) {
+    return { success: true, cached: true, data: keyUsageCache.get(cacheKey) };
+  }
+  if (!token) return { success: false, notConfigured: true, error: t('keys.tokenNotConfigured') };
+
+  const url = `https://platform.deepseek.com${USAGE_EXPORT_PATH}?month=${month}&year=${year}`;
+  const result = await requestBinaryUrl(url, token);
+  if (!result.success) {
+    return { success: false, status: result.status, error: usageErrorFromResult(result) };
+  }
+
+  // A JSON body means an application-level error despite the HTTP 200.
+  if (result.contentType.toLowerCase().includes('json')) {
+    let json = {};
+    try { json = JSON.parse(result.buffer.toString('utf8')); } catch (e) {}
+    const code = json && json.code;
+    if (code !== undefined && code !== 0) {
+      return {
+        success: false,
+        status: result.status,
+        code,
+        error: usageErrorFromResult({ code, status: result.status, error: json.msg || json.message })
+      };
+    }
+  }
+
+  const parsed = parseUsageExportBuffer(result.buffer, { unnamedLabel: t('keys.unnamed') });
+  if (!parsed.success) return { success: false, error: t(parsed.errorKey) };
+  parsed.data.month = month;
+  parsed.data.year = year;
+  parsed.data.source = 'auto';
+  parsed.data.fetchedAt = Date.now();
+  if (cacheKey) keyUsageCache.set(cacheKey, parsed.data);
+  return { success: true, data: parsed.data };
+}
+
 let usageSyncWindow = null;
 let usageTokenCaptured = false;
 let usageTokenCandidates = new Set();
@@ -1394,6 +1489,26 @@ ipcMain.handle('fetch-usage', async (event, params) => {
   const month = Number(params?.month || now.getMonth() + 1);
   const year = Number(params?.year || now.getFullYear());
   return fetchUsageMonth(month, year);
+});
+
+// Per-API-key usage for the active account (official export)
+ipcMain.handle('fetch-key-usage', async (event, params = {}) => {
+  const now = new Date();
+  const month = Number(params.month || now.getMonth() + 1);
+  const year = Number(params.year || now.getFullYear());
+  return fetchKeyUsage(month, year, !!params.force);
+});
+
+// Per-API-key usage from a manually imported ZIP/CSV export
+ipcMain.handle('import-usage-export', async (event, payload = {}) => {
+  const arrayBuffer = payload.buffer;
+  if (!arrayBuffer || !arrayBuffer.byteLength) return { success: false, error: t('keys.importEmpty') };
+  const parsed = parseUsageExportBuffer(Buffer.from(arrayBuffer), { unnamedLabel: t('keys.unnamed') });
+  if (!parsed.success) return { success: false, error: t(parsed.errorKey) };
+  parsed.data.source = 'import';
+  parsed.data.fetchedAt = Date.now();
+  if (payload.name) parsed.data.fileName = String(payload.name).slice(0, 120);
+  return { success: true, data: parsed.data };
 });
 
 // Open browser for web login
