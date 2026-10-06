@@ -46,6 +46,7 @@ How to add screenshots:
 
 - **Balance alerts** — get a system notification when your balance drops below a threshold you set (once per threshold crossing, per account)
 - **Multi-account support** — manage several DeepSeek accounts and switch between them in one click
+- **Per-API-key breakdown** — split the month's requests, tokens, cache hit rate and spend across every API key of the account, from the official usage export (auto-fetched with the usage token, or imported as a ZIP/CSV)
 - **Encrypted credentials** — API keys and usage tokens are encrypted at rest using your OS keychain (Electron `safeStorage`)
 - **In-app auto-updates** — new releases are detected and installed right from the app
 - **Real-time balance monitoring** — query your DeepSeek account balance with one click; live available amount and account status
@@ -115,10 +116,11 @@ Build artifacts are output to `dist/`.
 
 | Area | Description |
 |------|-------------|
-| Account balance | Total balance and availability status |
-| Today's spend | Accumulated spend for today |
-| Month-to-date | Accumulated spend for the current month |
-| V4 Flash / V4 Pro | Per-model monthly tokens, spend, and cache hit rate |
+| Account balance | Total balance and availability status; pick an API key to scope the usage figures below |
+| Today's spend | Accumulated spend for today (account, or the selected API key) |
+| Month-to-date | Accumulated spend for the current month (account, or the selected API key) |
+| V4 Flash / V4 Pro | Per-model monthly tokens, spend, and cache hit rate (selected account, or the selected API key) |
+| By API key | Per-key requests, tokens, cache hit rate and spend for the selected month |
 | 7-day trend | Token consumption bar chart; hover for daily details |
 
 ### Auto refresh
@@ -136,6 +138,7 @@ deepseek-monitor/
 │   └── icon.ico
 ├── src/                     # Source code
 │   ├── main.js              # Main process: window management, IPC, API requests, config storage
+│   ├── usage-export.js      # Pure parser for the official usage export (per-API-key aggregation)
 │   ├── preload.js           # Preload script: safely exposes main-process APIs to the renderer
 │   └── index.html           # Renderer: full UI and interaction logic
 ├── CONTRIBUTING.md          # Contribution guidelines
@@ -162,6 +165,7 @@ The app uses the following official DeepSeek endpoints:
 | `GET /models` | Available models | API Key |
 | `GET /api/v0/usage/amount` | Usage statistics | Usage Token |
 | `GET /api/v0/usage/cost` | Cost statistics | Usage Token |
+| `GET /api/v0/usage/export` | Monthly usage export (ZIP with per-key breakdown) | Usage Token |
 
 ## 🔐 Configuration Storage
 
@@ -177,6 +181,7 @@ Config (API key, usage token, auto-launch, etc.) is stored in `config.json` unde
 
 1. **Usage token expiry** — tokens captured via web login may expire; re-sync if usage queries fail
 2. **Balance vs. usage** — balance queries use the API key; usage statistics use a separate usage token
+3. **Multiple currencies** — if an account is billed in several currencies, costs are shown per currency (e.g. `¥6.04 + $0.65`) and never converted or summed together
 3. **Windows auto-launch** — via registry key `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`
 4. **macOS auto-launch** — via `~/Library/LaunchAgents/com.deepseek.monitor.plist`
 
