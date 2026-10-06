@@ -199,7 +199,10 @@ function buildCostInfo(costText) {
   const iCost = idx('cost');
   const iCurrency = idx('currency');
   const iDate = idx('utc_date') >= 0 ? idx('utc_date') : idx('start_time_iso');
-  if (iModel < 0 || iCost < 0) return empty;
+  // Without a currency column the amounts are not attributed to a currency, so
+  // the official cost is ignored and the derived (currency-less) totals are used
+  // — better than mislabelling a USD account as CNY.
+  if (iModel < 0 || iCost < 0 || iCurrency < 0) return empty;
 
   const totals = {};
   const byModel = new Map();
@@ -212,7 +215,8 @@ function buildCostInfo(costText) {
     if (!model) continue;
     const costValue = Number(String(row[iCost] || '').trim());
     if (!Number.isFinite(costValue)) continue;
-    const currency = (iCurrency >= 0 ? String(row[iCurrency] || '').trim() : '') || 'CNY';
+    const currency = String(row[iCurrency] || '').trim();
+    if (!currency) continue;
     const date = dayOfColumn(row, iDate);
 
     addMoney(totals, currency, costValue);
