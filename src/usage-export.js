@@ -303,6 +303,29 @@ function allocateOfficialCost(keys, globalWeights, costInfo) {
       allocatedPerCurrency[currency] = (allocatedPerCurrency[currency] || 0) + amount;
     }
   }
+
+  // A currency whose official rows matched no key weight (e.g. a day/model that
+  // is missing from amount.csv) would otherwise vanish from the per-key split.
+  // Spread it across keys by overall usage so the per-key sums still add up to
+  // the official total; it cannot be attributed to a day or model, so it only
+  // affects the per-key total, not the daily/model breakdown.
+  const usageWeights = new Map();
+  let totalUsage = 0;
+  for (const [name, item] of keys) {
+    const tokens = item.cacheHit + item.cacheMiss + item.output;
+    const weight = tokens > 0 ? tokens : item.requests;
+    usageWeights.set(name, weight);
+    totalUsage += weight;
+  }
+  if (totalUsage > 0) {
+    for (const [currency, officialTotal] of Object.entries(costInfo.totals)) {
+      if ((allocatedPerCurrency[currency] || 0) > 0 || !officialTotal) continue;
+      for (const [name] of keys) {
+        addMoney(byName.get(name).byCurrency, currency, officialTotal * (usageWeights.get(name) / totalUsage));
+      }
+    }
+  }
+
   const factors = {};
   for (const [currency, officialTotal] of Object.entries(costInfo.totals)) {
     const allocated = allocatedPerCurrency[currency] || 0;
